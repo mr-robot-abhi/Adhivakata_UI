@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,9 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Bell, Shield, Mail } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import api from "@/services/api"
+import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
   const { user } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [profileData, setProfileData] = useState({
     name: "",
@@ -51,6 +55,8 @@ export default function SettingsPage() {
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const [currentFontSize, setCurrentFontSize] = useState("medium")
+  const [currentLanguage, setCurrentLanguage] = useState("english")
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -81,6 +87,22 @@ export default function SettingsPage() {
         // Set appearance settings if available
         if (profile.appearanceSettings) {
           setAppearanceSettings(profile.appearanceSettings)
+
+          // Apply font size from settings
+          if (profile.appearanceSettings.fontSize) {
+            setCurrentFontSize(profile.appearanceSettings.fontSize)
+            applyFontSize(profile.appearanceSettings.fontSize)
+          }
+
+          // Apply language from settings
+          if (profile.appearanceSettings.language) {
+            setCurrentLanguage(profile.appearanceSettings.language)
+          }
+
+          // Apply theme from settings
+          if (profile.appearanceSettings.theme) {
+            setTheme(profile.appearanceSettings.theme)
+          }
         }
       } catch (error) {
         console.error("Error fetching profile:", error)
@@ -98,7 +120,16 @@ export default function SettingsPage() {
     }
 
     fetchUserProfile()
-  }, [user])
+
+    // Initialize font size from localStorage or default
+    const savedFontSize = localStorage.getItem("fontSize") || "medium"
+    setCurrentFontSize(savedFontSize)
+    applyFontSize(savedFontSize)
+
+    // Initialize language from localStorage or default
+    const savedLanguage = localStorage.getItem("language") || "english"
+    setCurrentLanguage(savedLanguage)
+  }, [user, setTheme])
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target
@@ -120,6 +151,41 @@ export default function SettingsPage() {
 
   const handleAppearanceChange = (name, value) => {
     setAppearanceSettings((prev) => ({ ...prev, [name]: value }))
+
+    // Apply changes immediately
+    if (name === "theme") {
+      setTheme(value)
+    } else if (name === "fontSize") {
+      setCurrentFontSize(value)
+      applyFontSize(value)
+      localStorage.setItem("fontSize", value)
+    } else if (name === "language") {
+      setCurrentLanguage(value)
+      localStorage.setItem("language", value)
+    }
+  }
+
+  // Function to apply font size to the document
+  const applyFontSize = (size) => {
+    const html = document.documentElement
+
+    // Remove any existing font size classes
+    html.classList.remove("text-sm", "text-base", "text-lg")
+
+    // Apply the appropriate class based on the selected size
+    switch (size) {
+      case "small":
+        html.classList.add("text-sm")
+        break
+      case "medium":
+        html.classList.add("text-base")
+        break
+      case "large":
+        html.classList.add("text-lg")
+        break
+      default:
+        html.classList.add("text-base")
+    }
   }
 
   const updateProfile = async (e) => {
@@ -174,7 +240,7 @@ export default function SettingsPage() {
     setErrorMessage("")
 
     try {
-      await api.users.updateProfile({ notificationSettings })
+      await api.users.updateNotifications(notificationSettings)
       setSuccessMessage("Notification settings updated successfully")
     } catch (error) {
       console.error("Error updating notification settings:", error)
@@ -191,7 +257,7 @@ export default function SettingsPage() {
     setErrorMessage("")
 
     try {
-      await api.users.updateProfile({ securitySettings })
+      await api.users.updateSecurity(securitySettings)
       setSuccessMessage("Security settings updated successfully")
     } catch (error) {
       console.error("Error updating security settings:", error)
@@ -208,7 +274,7 @@ export default function SettingsPage() {
     setErrorMessage("")
 
     try {
-      await api.users.updateProfile({ appearanceSettings })
+      await api.users.updateAppearance(appearanceSettings)
       setSuccessMessage("Appearance settings updated successfully")
     } catch (error) {
       console.error("Error updating appearance settings:", error)
@@ -218,23 +284,78 @@ export default function SettingsPage() {
     }
   }
 
+  // Translations for multilingual support
+  const translations = {
+    english: {
+      settings: "Settings",
+      profile: "Profile",
+      password: "Password",
+      notifications: "Notifications",
+      security: "Security",
+      appearance: "Appearance",
+      successMessage: successMessage,
+      errorMessage: errorMessage,
+      saveChanges: "Save Changes",
+      saving: "Saving...",
+      updatePassword: "Update Password",
+      updating: "Updating...",
+      savePreferences: "Save Preferences",
+      saveSettings: "Save Settings",
+    },
+    hindi: {
+      settings: "सेटिंग्स",
+      profile: "प्रोफाइल",
+      password: "पासवर्ड",
+      notifications: "सूचनाएं",
+      security: "सुरक्षा",
+      appearance: "दिखावट",
+      successMessage: successMessage,
+      errorMessage: errorMessage,
+      saveChanges: "परिवर्तन सहेजें",
+      saving: "सहेज रहा है...",
+      updatePassword: "पासवर्ड अपडेट करें",
+      updating: "अपडेट हो रहा है...",
+      savePreferences: "प्राथमिकताएँ सहेजें",
+      saveSettings: "सेटिंग्स सहेजें",
+    },
+    kannada: {
+      settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+      profile: "ಪ್ರೊಫೈಲ್",
+      password: "ಪಾಸ್‌ವರ್ಡ್",
+      notifications: "ಅಧಿಸೂಚನೆಗಳು",
+      security: "ಭದ್ರತೆ",
+      appearance: "ರೂಪ",
+      successMessage: successMessage,
+      errorMessage: errorMessage,
+      saveChanges: "ಬದಲಾವಣೆಗಳನ್ನು ಉಳಿಸಿ",
+      saving: "ಉಳಿಸಲಾಗುತ್ತಿದೆ...",
+      updatePassword: "ಪಾಸ್‌ವರ್ಡ್ ಅಪ್‌ಡೇಟ್ ಮಾಡಿ",
+      updating: "ಅಪ್‌ಡೇಟ್ ಆಗುತ್ತಿದೆ...",
+      savePreferences: "ಆದ್ಯತೆಗಳನ್ನು ಉಳಿಸಿ",
+      saveSettings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳನ್ನು ಉಳಿಸಿ",
+    },
+  }
+
+  // Get current translations based on selected language
+  const t = translations[currentLanguage] || translations.english
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Settings</h1>
+        <h1 className="text-3xl font-bold">{t.settings}</h1>
       </div>
 
-      {successMessage && <div className="bg-green-50 text-green-800 p-4 rounded-md mb-4">{successMessage}</div>}
+      {successMessage && <div className="bg-green-50 text-green-800 p-4 rounded-md mb-4">{t.successMessage}</div>}
 
-      {errorMessage && <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">{errorMessage}</div>}
+      {errorMessage && <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">{t.errorMessage}</div>}
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="password">Password</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="appearance">Appearance</TabsTrigger>
+          <TabsTrigger value="profile">{t.profile}</TabsTrigger>
+          <TabsTrigger value="password">{t.password}</TabsTrigger>
+          <TabsTrigger value="notifications">{t.notifications}</TabsTrigger>
+          <TabsTrigger value="security">{t.security}</TabsTrigger>
+          <TabsTrigger value="appearance">{t.appearance}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
@@ -329,10 +450,10 @@ export default function SettingsPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t.saving}
                   </>
                 ) : (
-                  "Save Changes"
+                  t.saveChanges
                 )}
               </Button>
             </CardFooter>
@@ -387,10 +508,10 @@ export default function SettingsPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
+                    {t.updating}
                   </>
                 ) : (
-                  "Update Password"
+                  t.updatePassword
                 )}
               </Button>
             </CardFooter>
@@ -471,10 +592,10 @@ export default function SettingsPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t.saving}
                   </>
                 ) : (
-                  "Save Preferences"
+                  t.savePreferences
                 )}
               </Button>
             </CardFooter>
@@ -544,10 +665,10 @@ export default function SettingsPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t.saving}
                   </>
                 ) : (
-                  "Save Settings"
+                  t.saveSettings
                 )}
               </Button>
             </CardFooter>
@@ -637,6 +758,8 @@ export default function SettingsPage() {
                         >
                           <rect width="20" height="14" x="2" y="3" rx="2" />
                           <line x1="8" x2="16" y1="21" y2="21" />
+                          <line x1="12" x2="12" />
+                          <line x1="8" x2="16" y1="21" y2="21" />
                           <line x1="12" x2="12" y1="17" y2="21" />
                         </svg>
                         System
@@ -683,8 +806,6 @@ export default function SettingsPage() {
                       <SelectItem value="english">English</SelectItem>
                       <SelectItem value="hindi">Hindi</SelectItem>
                       <SelectItem value="kannada">Kannada</SelectItem>
-                      <SelectItem value="tamil">Tamil</SelectItem>
-                      <SelectItem value="telugu">Telugu</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -695,10 +816,10 @@ export default function SettingsPage() {
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
+                    {t.saving}
                   </>
                 ) : (
-                  "Save Preferences"
+                  t.savePreferences
                 )}
               </Button>
             </CardFooter>

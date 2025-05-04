@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "@/components/ui/use-toast"
 import Image from "next/image"
 import api from "@/services/api"
 
@@ -118,6 +119,8 @@ export default function NewCasePage() {
   const { user } = useAuth()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLawyer, setIsLawyer] = useState(true)
+  const [selectedFiles, setSelectedFiles] = useState([])
+  const [uploadProgress, setUploadProgress] = useState({})
 
   useEffect(() => {
     if (user) {
@@ -136,7 +139,7 @@ export default function NewCasePage() {
     court: "",
     courtHall: "",
     courtComplex: "",
-    filingDate: null,
+    filingDate: new Date(),
     hearingDate: null,
     petitionerRole: "petitioner", // New field for role selection
     petitionerType: "individual",
@@ -206,13 +209,65 @@ export default function NewCasePage() {
     })
   }
 
+  const handleFileChange = (e) => {
+    const files = Array.from(e.target.files)
+    setSelectedFiles(files)
+  }
+
+  const uploadDocuments = async (caseId) => {
+    if (selectedFiles.length === 0) return []
+
+    const uploadedDocs = []
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i]
+      setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+
+      try {
+        const formData = new FormData()
+        formData.append("file", file)
+        formData.append("caseId", caseId)
+        formData.append("name", file.name)
+        formData.append("description", `Document for case ${caseData.title}`)
+
+        // Upload the document
+        const response = await api.documents.upload(formData, (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          setUploadProgress((prev) => ({ ...prev, [file.name]: percentCompleted }))
+        })
+
+        uploadedDocs.push(response.data)
+      } catch (error) {
+        console.error(`Error uploading document ${file.name}:`, error)
+      }
+    }
+
+    return uploadedDocs
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
 
+    // Validate required fields
+    if (!caseData.title || !caseData.caseNumber || !caseData.caseType || !caseData.status) {
+      toast({
+        title: "Missing required fields",
+        description: "Please fill in all required fields: Case Title, Case Number, Case Type, and Status.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       // API call to create a new case
       const newCase = await api.cases.create(caseData)
+
+      // Upload documents if any are selected
+      if (selectedFiles.length > 0) {
+        await uploadDocuments(newCase.id || newCase._id)
+      }
 
       // If the case has a hearing date, create a calendar event
       if (caseData.hearingDate) {
@@ -223,38 +278,26 @@ export default function NewCasePage() {
           type: "hearing",
           location: `${caseData.court}, Court Hall ${caseData.courtHall}`,
           description: `Hearing for case ${caseData.caseNumber || caseData.title}`,
-          caseId: newCase.id,
+          caseId: newCase.id || newCase._id,
         }
 
         await api.events.create(eventData)
       }
 
+      toast({
+        title: "Case created successfully",
+        description: "Your new case has been created and saved.",
+      })
+
       router.push("/dashboard/cases")
     } catch (error) {
       console.error("Error saving case:", error)
 
-      // Fallback for demo when API is not available
-      if (caseData.hearingDate) {
-        const dateString = caseData.hearingDate.toISOString().split("T")[0]
-
-        const storedEvents = localStorage.getItem("calendar-events")
-        const events = storedEvents ? JSON.parse(storedEvents) : []
-
-        events.push({
-          id: `event-${Date.now()}`,
-          title: `Hearing - ${caseData.title}`,
-          date: dateString,
-          time: "10:00 AM",
-          type: "hearing",
-          location: `${caseData.court}, Court Hall ${caseData.courtHall}`,
-          description: `Hearing for case ${caseData.caseNumber || caseData.title}`,
-          case: caseData.title,
-        })
-
-        localStorage.setItem("calendar-events", JSON.stringify(events))
-      }
-
-      alert("There was an error saving the case. Please try again.")
+      toast({
+        title: "Error creating case",
+        description: "There was an error saving the case. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -288,25 +331,32 @@ export default function NewCasePage() {
                   <form id="case-form" onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="title">Case Title</Label>
+                        <Label htmlFor="title">
+                          Case Title <span className="text-red-500">*</span>
+                        </Label>
                         <Input id="title" name="title" value={caseData.title} onChange={handleChange} required />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="caseNumber">Case Number</Label>
+                        <Label htmlFor="caseNumber">
+                          Case Number <span className="text-red-500">*</span>
+                        </Label>
                         <Input
                           id="caseNumber"
                           name="caseNumber"
                           value={caseData.caseNumber}
                           onChange={handleChange}
                           placeholder="e.g., CRL/123/2023"
+                          required
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="caseType">Case Type</Label>
+                        <Label htmlFor="caseType">
+                          Case Type <span className="text-red-500">*</span>
+                        </Label>
                         <Select
                           value={caseData.caseType}
                           onValueChange={(value) => handleSelectChange("caseType", value)}
@@ -326,8 +376,14 @@ export default function NewCasePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="status">Status</Label>
-                        <Select value={caseData.status} onValueChange={(value) => handleSelectChange("status", value)}>
+                        <Label htmlFor="status">
+                          Status <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={caseData.status}
+                          onValueChange={(value) => handleSelectChange("status", value)}
+                          required
+                        >
                           <SelectTrigger id="status">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
@@ -516,7 +572,6 @@ export default function NewCasePage() {
                             <Select
                               value={caseData.courtType}
                               onValueChange={(value) => handleSelectChange("courtType", value)}
-                              required
                             >
                               <SelectTrigger id="courtType">
                                 <SelectValue placeholder="Select court type" />
@@ -557,7 +612,7 @@ export default function NewCasePage() {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="court">Court Name</Label>
-                            <Input id="court" name="court" value={caseData.court} onChange={handleChange} required />
+                            <Input id="court" name="court" value={caseData.court} onChange={handleChange} />
                           </div>
 
                           <div className="space-y-2">
@@ -738,15 +793,49 @@ export default function NewCasePage() {
                         <p className="text-sm text-muted-foreground">
                           Drag and drop files here, or click to select files
                         </p>
-                        <Button
-                          variant="outline"
-                          className="mt-4"
-                          onClick={() => alert("Document upload functionality is under development.")}
-                        >
-                          Select Files
-                        </Button>
+                        <div className="mt-4">
+                          <input
+                            type="file"
+                            id="document-upload"
+                            className="hidden"
+                            multiple
+                            onChange={handleFileChange}
+                          />
+                          <Button variant="outline" onClick={() => document.getElementById("document-upload").click()}>
+                            Select Files
+                          </Button>
+                        </div>
                       </div>
                     </div>
+
+                    {selectedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">Selected Files</h3>
+                        <div className="space-y-2">
+                          {selectedFiles.map((file, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 border rounded-md">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-sm">{file.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  ({(file.size / 1024).toFixed(2)} KB)
+                                </span>
+                              </div>
+                              {uploadProgress[file.name] > 0 && uploadProgress[file.name] < 100 && (
+                                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-primary"
+                                    style={{ width: `${uploadProgress[file.name]}%` }}
+                                  ></div>
+                                </div>
+                              )}
+                              {uploadProgress[file.name] === 100 && (
+                                <span className="text-xs text-green-600">Uploaded</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Required Documents</h3>

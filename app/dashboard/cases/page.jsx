@@ -43,7 +43,16 @@ export default function CasesPage() {
 
         // API call to fetch cases
         const response = await api.cases.getAll(filters)
-        setCases(response)
+
+        // Ensure response is an array
+        const casesArray = Array.isArray(response) ? response : response.data || []
+
+        // Validate that casesArray contains valid case objects
+        if (!casesArray.every(item => item && typeof item === 'object' && 'id' in item)) {
+          throw new Error("Invalid case data received from API")
+        }
+
+        setCases(casesArray)
       } catch (error) {
         console.error("Error fetching cases:", error)
         setError("Failed to load cases. Please try again.")
@@ -60,6 +69,11 @@ export default function CasesPage() {
 
   // Filter cases based on search and filters
   const filteredCases = cases.filter((caseItem) => {
+    // Ensure caseItem has required properties
+    if (!caseItem || !caseItem.title || !caseItem.number || !caseItem.court) {
+      return false
+    }
+
     const matchesSearch =
       caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       caseItem.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -75,8 +89,8 @@ export default function CasesPage() {
   })
 
   // Get unique values for filters
-  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.type))]
-  const districts = ["all", ...new Set(cases.map((c) => c.district))]
+  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.type).filter(Boolean))]
+  const districts = ["all", ...new Set(cases.map((c) => c.district).filter(Boolean))]
 
   if (loading) {
     return (

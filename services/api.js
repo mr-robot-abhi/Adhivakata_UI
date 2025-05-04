@@ -1,181 +1,436 @@
-// Base API URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
 
-// Helper function for making API requests
-async function fetchAPI(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`
+// Helper function to handle API responses
+const handleResponse = async (response) => {
+  const data = await response.json()
 
-  // Default headers
-  const headers = {
-    "Content-Type": "application/json",
-    ...options.headers,
+  if (!response.ok) {
+    const error = data.message || response.statusText
+    throw new Error(error)
   }
 
-  // Add authorization token if available
-  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+  return data
+}
+
+// Helper function to get auth token
+const getToken = () => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("auth_token")
+  }
+  return null
+}
+
+// Helper function to create headers with auth token
+const createHeaders = (contentType = "application/json") => {
+  const headers = {
+    "Content-Type": contentType,
+  }
+
+  const token = getToken()
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
-  const config = {
-    ...options,
-    headers,
-  }
-
-  try {
-    const response = await fetch(url, config)
-
-    // Handle 401 Unauthorized - redirect to login
-    if (response.status === 401) {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("auth_token")
-        localStorage.removeItem("user")
-        window.location.href = "/auth/login"
-        return null
-      }
-    }
-
-    const data = await response.json()
-
-    if (!response.ok) {
-      throw new Error(data.message || "API request failed")
-    }
-
-    return data
-  } catch (error) {
-    console.error("API request error:", error)
-    throw error
-  }
+  return headers
 }
 
-export default {
-  // Auth endpoints
+const api = {
   auth: {
-    login: (credentials) =>
-      fetchAPI("/auth/login", {
+    register: async (userData) => {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
-        body: JSON.stringify(credentials),
-      }),
-
-    register: (userData) =>
-      fetchAPI("/auth/register", {
-        method: "POST",
+        headers: createHeaders(),
         body: JSON.stringify(userData),
-      }),
+      })
 
-    logout: () =>
-      fetchAPI("/auth/logout", {
+      return handleResponse(response)
+    },
+
+    login: async (credentials) => {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
-      }),
+        headers: createHeaders(),
+        body: JSON.stringify(credentials),
+      })
 
-    verifyToken: () => fetchAPI("/auth/verify"),
+      return handleResponse(response)
+    },
+
+    logout: async () => {
+      const response = await fetch(`${API_URL}/auth/logout`, {
+        method: "POST",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+
+    verifyToken: async () => {
+      const response = await fetch(`${API_URL}/auth/verify`, {
+        method: "POST",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
   },
 
-  // Cases endpoints
-  cases: {
-    getAll: (filters = {}) => fetchAPI("/cases?" + new URLSearchParams(filters)),
-
-    getById: (id) => fetchAPI(`/cases/${id}`),
-
-    create: (caseData) =>
-      fetchAPI("/cases", {
-        method: "POST",
-        body: JSON.stringify(caseData),
-      }),
-
-    update: (id, caseData) =>
-      fetchAPI(`/cases/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(caseData),
-      }),
-
-    delete: (id) =>
-      fetchAPI(`/cases/${id}`, {
-        method: "DELETE",
-      }),
-  },
-
-  // Documents endpoints
-  documents: {
-    getAll: (filters = {}) => fetchAPI("/documents?" + new URLSearchParams(filters)),
-
-    getById: (id) => fetchAPI(`/documents/${id}`),
-
-    upload: (formData) =>
-      fetchAPI("/documents/upload", {
-        method: "POST",
-        headers: {}, // Let the browser set the content type for form data
-        body: formData,
-      }),
-
-    update: (id, documentData) =>
-      fetchAPI(`/documents/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(documentData),
-      }),
-
-    delete: (id) =>
-      fetchAPI(`/documents/${id}`, {
-        method: "DELETE",
-      }),
-  },
-
-  // Calendar/Events endpoints
-  events: {
-    getAll: (filters = {}) => fetchAPI("/events?" + new URLSearchParams(filters)),
-
-    getById: (id) => fetchAPI(`/events/${id}`),
-
-    create: (eventData) =>
-      fetchAPI("/events", {
-        method: "POST",
-        body: JSON.stringify(eventData),
-      }),
-
-    update: (id, eventData) =>
-      fetchAPI(`/events/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(eventData),
-      }),
-
-    delete: (id) =>
-      fetchAPI(`/events/${id}`, {
-        method: "DELETE",
-      }),
-  },
-
-  // User/Profile endpoints
   users: {
-    getProfile: () => fetchAPI("/users/profile"),
+    getProfile: async () => {
+      const response = await fetch(`${API_URL}/users/profile`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
 
-    updateProfile: (profileData) =>
-      fetchAPI("/users/profile", {
+      return handleResponse(response)
+    },
+
+    updateProfile: async (profileData) => {
+      const response = await fetch(`${API_URL}/users/profile`, {
         method: "PUT",
+        headers: createHeaders(),
         body: JSON.stringify(profileData),
-      }),
+      })
 
-    changePassword: (passwordData) =>
-      fetchAPI("/users/change-password", {
+      return handleResponse(response)
+    },
+
+    changePassword: async (passwordData) => {
+      const response = await fetch(`${API_URL}/users/change-password`, {
         method: "POST",
+        headers: createHeaders(),
         body: JSON.stringify(passwordData),
-      }),
+      })
+
+      return handleResponse(response)
+    },
+
+    updateAppearance: async (appearanceSettings) => {
+      const response = await fetch(`${API_URL}/users/appearance`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(appearanceSettings),
+      })
+
+      return handleResponse(response)
+    },
+
+    updateNotifications: async (notificationSettings) => {
+      const response = await fetch(`${API_URL}/users/notifications`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(notificationSettings),
+      })
+
+      return handleResponse(response)
+    },
+
+    updateSecurity: async (securitySettings) => {
+      const response = await fetch(`${API_URL}/users/security`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(securitySettings),
+      })
+
+      return handleResponse(response)
+    },
   },
 
-  // Dashboard data
-  dashboard: {
-    getSummary: () => fetchAPI("/dashboard/summary"),
+  cases: {
+    getAll: async (filters = {}) => {
+      // Convert filters object to query string
+      const queryParams = new URLSearchParams()
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          queryParams.append(key, value)
+        }
+      })
 
-    getRecentCases: () => fetchAPI("/dashboard/recent-cases"),
+      const response = await fetch(`${API_URL}/cases?${queryParams.toString()}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
 
-    getUpcomingEvents: () => fetchAPI("/dashboard/upcoming-events"),
-  },
+      const data = await handleResponse(response)
+      return data.data || []
+    },
 
-  // Support endpoints
-  support: {
-    contact: (formData) =>
-      fetchAPI("/support/contact", {
+    getById: async (id) => {
+      const response = await fetch(`${API_URL}/cases/${id}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    create: async (caseData) => {
+      const response = await fetch(`${API_URL}/cases`, {
         method: "POST",
-        body: JSON.stringify(formData),
-      }),
+        headers: createHeaders(),
+        body: JSON.stringify(caseData),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    update: async (id, caseData) => {
+      const response = await fetch(`${API_URL}/cases/${id}`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(caseData),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    delete: async (id) => {
+      const response = await fetch(`${API_URL}/cases/${id}`, {
+        method: "DELETE",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+
+    getStats: async () => {
+      const response = await fetch(`${API_URL}/cases/stats`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+
+    getRecent: async () => {
+      const response = await fetch(`${API_URL}/cases/recent`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+
+    getTimeline: async (id) => {
+      const response = await fetch(`${API_URL}/cases/${id}/timeline`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+  },
+
+  documents: {
+    getAll: async (filters = {}) => {
+      // Convert filters object to query string
+      const queryParams = new URLSearchParams()
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          queryParams.append(key, value)
+        }
+      })
+
+      const response = await fetch(`${API_URL}/documents?${queryParams.toString()}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+
+    getById: async (id) => {
+      const response = await fetch(`${API_URL}/documents/${id}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    upload: async (formData, onProgress) => {
+      // Create XMLHttpRequest to track upload progress
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+
+        // Setup progress tracking
+        if (onProgress) {
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              onProgress(event)
+            }
+          })
+        }
+
+        // Handle response
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve(data)
+            } catch (error) {
+              reject(new Error("Invalid JSON response"))
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`))
+          }
+        }
+
+        // Handle errors
+        xhr.onerror = () => {
+          reject(new Error("Network error occurred during upload"))
+        }
+
+        // Setup and send request
+        xhr.open("POST", `${API_URL}/documents/upload`)
+
+        // Add authorization header
+        const token = getToken()
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+        }
+
+        xhr.send(formData)
+      })
+    },
+
+    update: async (id, documentData) => {
+      const response = await fetch(`${API_URL}/documents/${id}`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(documentData),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    delete: async (id) => {
+      const response = await fetch(`${API_URL}/documents/${id}`, {
+        method: "DELETE",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+
+    share: async (id, users) => {
+      const response = await fetch(`${API_URL}/documents/${id}/share`, {
+        method: "POST",
+        headers: createHeaders(),
+        body: JSON.stringify({ users }),
+      })
+
+      return handleResponse(response)
+    },
+
+    toggleFavorite: async (id) => {
+      const response = await fetch(`${API_URL}/documents/${id}/favorite`, {
+        method: "POST",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+  },
+
+  events: {
+    getAll: async (filters = {}) => {
+      // Convert filters object to query string
+      const queryParams = new URLSearchParams()
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") {
+          queryParams.append(key, value)
+        }
+      })
+
+      const response = await fetch(`${API_URL}/events?${queryParams.toString()}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+
+    getById: async (id) => {
+      const response = await fetch(`${API_URL}/events/${id}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    create: async (eventData) => {
+      const response = await fetch(`${API_URL}/events`, {
+        method: "POST",
+        headers: createHeaders(),
+        body: JSON.stringify(eventData),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    update: async (id, eventData) => {
+      const response = await fetch(`${API_URL}/events/${id}`, {
+        method: "PUT",
+        headers: createHeaders(),
+        body: JSON.stringify(eventData),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    delete: async (id) => {
+      const response = await fetch(`${API_URL}/events/${id}`, {
+        method: "DELETE",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+  },
+
+  dashboard: {
+    getSummary: async () => {
+      const response = await fetch(`${API_URL}/dashboard/summary`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data
+    },
+
+    getRecentCases: async () => {
+      const response = await fetch(`${API_URL}/dashboard/recent-cases`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
+
+    getUpcomingEvents: async () => {
+      const response = await fetch(`${API_URL}/dashboard/upcoming-events`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      return handleResponse(response)
+    },
   },
 }
+
+export default api
