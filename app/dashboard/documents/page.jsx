@@ -34,6 +34,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import api from "@/services/api"
+import { useToast } from "@/components/ui/use-toast"
 
 // Document categories
 const DOCUMENT_CATEGORIES = [
@@ -85,6 +86,7 @@ const getStatusBadge = (status) => {
 
 export default function DocumentsPage() {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [isLawyer, setIsLawyer] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [caseFilter, setCaseFilter] = useState("all")
@@ -109,7 +111,84 @@ export default function DocumentsPage() {
     case: "",
     category: "",
     tags: "",
+    description: "",
   })
+  const [uploadProgress, setUploadProgress] = useState({})
+
+  const fetchDocuments = async () => {
+    setLoading(true)
+    try {
+      // Prepare filter parameters
+      const filters = {
+        search: searchTerm,
+        case: caseFilter !== "all" ? caseFilter : undefined,
+        category: categoryFilter !== "All Categories" ? categoryFilter : undefined,
+        status: statusFilter !== "All Statuses" ? statusFilter.toLowerCase() : undefined,
+        date: dateFilter !== "all" ? dateFilter : undefined,
+        tag: tagFilter || undefined,
+        tab: activeTab !== "all" ? activeTab : undefined,
+        sortBy,
+        sortOrder,
+      }
+
+      // API calls to fetch documents and cases
+      const [documentsResponse, casesResponse] = await Promise.all([api.documents.getAll(filters), api.cases.getAll()])
+
+      setDocuments(documentsResponse.data || [])
+      setCases(casesResponse.data || [])
+    } catch (error) {
+      console.error("Error fetching documents:", error)
+      setError("Failed to load documents. Please try again.")
+
+      // Fallback to sample data
+      setDocuments([
+        {
+          id: "1",
+          name: "Complaint.pdf",
+          type: "pdf",
+          size: 1024000,
+          category: "Pleadings",
+          status: "Approved",
+          case: { title: "Smith v. Johnson" },
+          uploadedBy: { name: "John Lawyer" },
+          createdAt: new Date().toISOString(),
+          tags: ["important", "court-filing"],
+        },
+        {
+          id: "2",
+          name: "Evidence Photo.jpg",
+          type: "jpg",
+          size: 2048000,
+          category: "Evidence",
+          status: "Pending",
+          case: { title: "Estate of Williams" },
+          uploadedBy: { name: "John Lawyer" },
+          createdAt: new Date().toISOString(),
+          tags: ["photo", "evidence"],
+        },
+        {
+          id: "3",
+          name: "Contract Draft.docx",
+          type: "docx",
+          size: 512000,
+          category: "Contracts",
+          status: "Approved",
+          case: { title: "Brown LLC v. Davis Corp" },
+          uploadedBy: { name: "John Lawyer" },
+          createdAt: new Date().toISOString(),
+          tags: ["draft", "contract"],
+        },
+      ])
+
+      setCases([
+        { id: "1", title: "Smith v. Johnson" },
+        { id: "2", title: "Estate of Williams" },
+        { id: "3", title: "Brown LLC v. Davis Corp" },
+      ])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Check if user is lawyer or client
@@ -119,85 +198,7 @@ export default function DocumentsPage() {
   }, [user])
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true)
-      try {
-        // Prepare filter parameters
-        const filters = {
-          search: searchTerm,
-          case: caseFilter !== "all" ? caseFilter : undefined,
-          category: categoryFilter !== "All Categories" ? categoryFilter : undefined,
-          status: statusFilter !== "All Statuses" ? statusFilter.toLowerCase() : undefined,
-          date: dateFilter !== "all" ? dateFilter : undefined,
-          tag: tagFilter || undefined,
-          tab: activeTab !== "all" ? activeTab : undefined,
-          sortBy,
-          sortOrder,
-        }
-
-        // API calls to fetch documents and cases
-        const [documentsResponse, casesResponse] = await Promise.all([
-          api.documents.getAll(filters),
-          api.cases.getAll(),
-        ])
-
-        setDocuments(documentsResponse.data || [])
-        setCases(casesResponse.data || [])
-      } catch (error) {
-        console.error("Error fetching documents:", error)
-        setError("Failed to load documents. Please try again.")
-
-        // Fallback to sample data
-        setDocuments([
-          {
-            id: "1",
-            name: "Complaint.pdf",
-            type: "pdf",
-            size: 1024000,
-            category: "Pleadings",
-            status: "Approved",
-            case: { title: "Smith v. Johnson" },
-            uploadedBy: { name: "John Lawyer" },
-            createdAt: new Date().toISOString(),
-            tags: ["important", "court-filing"],
-          },
-          {
-            id: "2",
-            name: "Evidence Photo.jpg",
-            type: "jpg",
-            size: 2048000,
-            category: "Evidence",
-            status: "Pending",
-            case: { title: "Estate of Williams" },
-            uploadedBy: { name: "John Lawyer" },
-            createdAt: new Date().toISOString(),
-            tags: ["photo", "evidence"],
-          },
-          {
-            id: "3",
-            name: "Contract Draft.docx",
-            type: "docx",
-            size: 512000,
-            category: "Contracts",
-            status: "Approved",
-            case: { title: "Brown LLC v. Davis Corp" },
-            uploadedBy: { name: "John Lawyer" },
-            createdAt: new Date().toISOString(),
-            tags: ["draft", "contract"],
-          },
-        ])
-
-        setCases([
-          { id: "1", title: "Smith v. Johnson" },
-          { id: "2", title: "Estate of Williams" },
-          { id: "3", title: "Brown LLC v. Davis Corp" },
-        ])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
+    fetchDocuments()
   }, [
     isLawyer,
     searchTerm,
@@ -224,7 +225,11 @@ export default function DocumentsPage() {
     e.preventDefault()
 
     if (!uploadForm.file || !uploadForm.case) {
-      alert("Please select a file and case")
+      toast({
+        title: "Missing required fields",
+        description: "Please select a file and case",
+        variant: "destructive",
+      })
       return
     }
 
@@ -232,14 +237,29 @@ export default function DocumentsPage() {
       const formData = new FormData()
       formData.append("file", uploadForm.file)
       formData.append("caseId", uploadForm.case)
-      formData.append("category", uploadForm.category)
-      formData.append("tags", uploadForm.tags)
+      formData.append("name", uploadForm.file.name)
+      formData.append("description", uploadForm.description || `File for case ${uploadForm.case}`)
 
-      await api.documents.upload(formData)
+      if (uploadForm.category) {
+        formData.append("category", uploadForm.category)
+      }
+
+      if (uploadForm.tags) {
+        formData.append("tags", uploadForm.tags)
+      }
+
+      await api.documents.upload(formData, (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        setUploadProgress((prev) => ({ ...prev, [uploadForm.file.name]: percentCompleted }))
+      })
+
+      toast({
+        title: "Document uploaded successfully",
+        description: "Your document has been uploaded and attached to the case.",
+      })
 
       // Refresh documents
-      const documentsResponse = await api.documents.getAll()
-      setDocuments(documentsResponse.data || [])
+      fetchDocuments()
 
       setShowUploadDialog(false)
       setUploadForm({
@@ -247,10 +267,15 @@ export default function DocumentsPage() {
         case: "",
         category: "",
         tags: "",
+        description: "",
       })
     } catch (error) {
       console.error("Error uploading document:", error)
-      alert("Failed to upload document. Please try again.")
+      toast({
+        title: "Upload failed",
+        description: "Failed to upload document. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 

@@ -19,37 +19,46 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Check if this is a new user (no cases yet)
-        const summary = await api.dashboard.getSummary()
-        const recentCases = await api.dashboard.getRecentCases()
-        const upcomingEvents = await api.dashboard.getUpcomingEvents()
+        try {
+          // Fetch dashboard summary
+          const summary = await api.dashboard.getSummary()
 
-        setDashboardData({
-          summary,
-          recentCases,
-          upcomingEvents,
-        })
+          // Fetch recent cases
+          const recentCases = await api.dashboard.getRecentCases()
 
-        // If no cases, consider this a new user
-        setIsNewUser(recentCases.length === 0)
+          // Fetch upcoming events
+          const upcomingEvents = await api.dashboard.getUpcomingEvents()
+
+          setDashboardData({
+            summary,
+            recentCases: recentCases || [],
+            upcomingEvents: upcomingEvents || [],
+          })
+
+          // If no cases, consider this a new user
+          setIsNewUser(recentCases && recentCases.length === 0)
+        } catch (error) {
+          console.error("Error fetching dashboard data:", error)
+          // Set as new user if we can't fetch data
+          setIsNewUser(true)
+
+          // Set empty dashboard data
+          setDashboardData({
+            summary: {
+              activeCases: 0,
+              urgentCases: 0,
+              upcomingHearings: 0,
+              successRate: "0%",
+              documents: 0,
+            },
+            recentCases: [],
+            upcomingEvents: [],
+          })
+        } finally {
+          setLoading(false)
+        }
       } catch (error) {
-        console.error("Error fetching dashboard data:", error)
-        // Set as new user if we can't fetch data
-        setIsNewUser(true)
-
-        // Set empty dashboard data
-        setDashboardData({
-          summary: {
-            activeCases: 0,
-            urgentCases: 0,
-            upcomingHearings: 0,
-            successRate: "0%",
-            documents: 0,
-          },
-          recentCases: [],
-          upcomingEvents: [],
-        })
-      } finally {
+        console.error("Error in fetchDashboardData:", error)
         setLoading(false)
       }
     }

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
+import { toast } from "@/components/ui/use-toast"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
@@ -25,11 +26,18 @@ export function LoginForm() {
     setIsLoading(true)
 
     try {
-      await login(email, password)
-      router.push("/dashboard")
+      const success = await login(email, password)
+      if (success) {
+        router.push("/dashboard")
+      }
     } catch (error) {
       console.error("Login error:", error)
       setError(error.message || "Invalid email or password. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "Invalid email or password. Please try again.",
+      })
     } finally {
       setIsLoading(false)
     }
@@ -45,6 +53,11 @@ export function LoginForm() {
     } catch (error) {
       console.error("Google login error:", error)
       setError("Google login failed. Please try again.")
+      toast({
+        variant: "destructive",
+        title: "Authentication Error",
+        description: "Google login failed. Please try again.",
+      })
     } finally {
       setIsLoading(false)
     }

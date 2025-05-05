@@ -1,6 +1,14 @@
 "use client"
 
 import { createContext, useState, useEffect, useContext } from "react"
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+} from "firebase/auth"
+import { initializeApp } from "firebase/app"
 import api from "@/services/api"
 
 export const AuthContext = createContext()
@@ -9,82 +17,115 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
+  // Initialize Firebase
+  useEffect(() => {
+    try {
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      }
+
+      initializeApp(firebaseConfig)
+    } catch (error) {
+      console.error("Firebase initialization error:", error)
+    }
+  }, [])
+
   useEffect(() => {
     // Check for user in localStorage first (for persistent sessions)
     if (typeof window !== "undefined") {
       const storedUser = localStorage.getItem("user")
-      if (storedUser) {
+      const token = localStorage.getItem("auth_token")
+
+      if (storedUser && token) {
         try {
           setUser(JSON.parse(storedUser))
         } catch (e) {
           console.error("Error parsing stored user:", e)
           localStorage.removeItem("user")
+          localStorage.removeItem("auth_token")
         }
       }
-      setLoading(false)
-    }
 
-    // Verify token with backend
-    const verifyToken = async () => {
-      try {
-        const response = await api.auth.verifyToken()
-        if (response && response.user) {
-          setUser(response.user)
+      // If we have a token, verify with backend
+      const verifyToken = async () => {
+        if (!token) {
+          setLoading(false)
+          return
         }
-      } catch (error) {
-        console.error("Token verification failed:", error)
-        // Clear invalid token
-        localStorage.removeItem("auth_token")
-        localStorage.removeItem("user")
-        setUser(null)
-      } finally {
-        setLoading(false)
-      }
-    }
 
-    // Only verify if we have a token
-    if (typeof window !== "undefined" && localStorage.getItem("auth_token")) {
+        try {
+          const response = await api.auth.verifyToken()
+          if (response && response.user) {
+            setUser(response.user)
+            localStorage.setItem("user", JSON.stringify(response.user))
+          }
+        } catch (error) {
+          console.error("Token verification failed:", error)
+          // Clear invalid token
+          localStorage.removeItem("auth_token")
+          localStorage.removeItem("user")
+          setUser(null)
+        } finally {
+          setLoading(false)
+        }
+      }
+
       verifyToken()
     }
   }, [])
 
   const login = async (email, password) => {
     try {
-      // Call backend login API
-      const response = await api.auth.login({ email, password })
+      // First try to authenticate with Firebase
+      const auth = getAuth()
+      await signInWithEmailAndPassword(auth, email, password)
+      const idToken = await auth.currentUser.getIdToken()
 
-      if (response && response.token && response.user) {
-        localStorage.setItem("auth_token", response.token)
-        localStorage.setItem("user", JSON.stringify(response.user))
-        setUser(response.user)
+      // Call backend login API with the Firebase token
+      const response = await api.auth.googleLogin({ idToken })
+
+      handleAuthSuccess(response)
+      return response.user
+    } catch (firebaseError) {
+      console.log("Firebase auth failed, trying regular login:", firebaseError)
+
+      try {
+        // If Firebase fails, try regular login
+        const response = await api.auth.login({ email, password })
+        handleAuthSuccess(response)
         return response.user
+      } catch (error) {
+        console.error("Login error:", error)
+        throw error || new Error("Login failed")
       }
-
-      throw new Error("Invalid response from server")
-    } catch (error) {
-      console.error("Login error:", error)
-      throw error
     }
   }
 
-  const register = async (email, password, name, role = "lawyer") => {
+  const register = async (userData) => {
     try {
-      // Call backend registration API
-      const response = await api.auth.register({
-        email,
-        password,
-        name,
-        role,
-      })
+      const { email, password, name, role } = userData
 
-      if (response && response.token && response.user) {
-        localStorage.setItem("auth_token", response.token)
-        localStorage.setItem("user", JSON.stringify(response.user))
-        setUser(response.user)
-        return response.user
+      // Try to create Firebase account first if we have email/password
+      if (email && password) {
+        try {
+          const auth = getAuth()
+          await createUserWithEmailAndPassword(auth, email, password)
+        } catch (firebaseError) {
+          console.error("Firebase registration error:", firebaseError)
+          // Continue with backend registration even if Firebase fails
+        }
       }
 
-      throw new Error("Invalid response from server")
+      // Call backend registration API
+      const response = await api.auth.register(userData)
+
+      handleAuthSuccess(response)
+      return response.user
     } catch (error) {
       console.error("Registration error:", error)
       throw error
@@ -93,30 +134,40 @@ export const AuthProvider = ({ children }) => {
 
   const loginWithGoogle = async () => {
     try {
-      // In a real implementation, you would handle Google OAuth
-      // For now, we'll assume your backend has a Google auth endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/google`, {
-        method: "GET",
-        credentials: "include",
-      })
+      const auth = getAuth()
+      const provider = new GoogleAuthProvider()
 
-      if (response.ok) {
-        const data = await response.json()
-        localStorage.setItem("auth_token", data.token)
-        localStorage.setItem("user", JSON.stringify(data.user))
-        setUser(data.user)
-        return data.user
-      }
+      // Sign in with Google
+      const result = await signInWithPopup(auth, provider)
+      const idToken = await result.user.getIdToken()
 
-      throw new Error("Google authentication failed")
+      // Call backend to verify and get user data
+      const response = await api.auth.googleLogin({ idToken })
+
+      handleAuthSuccess(response)
+      return response.user
     } catch (error) {
       console.error("Google login error:", error)
       throw error
     }
   }
 
+  const handleAuthSuccess = (response) => {
+    if (response && response.token && response.user) {
+      localStorage.setItem("auth_token", response.token)
+      localStorage.setItem("user", JSON.stringify(response.user))
+      setUser(response.user)
+    } else {
+      throw new Error("Invalid response from server")
+    }
+  }
+
   const logout = async () => {
     try {
+      // Sign out from Firebase
+      const auth = getAuth()
+      await auth.signOut()
+
       // Call backend logout API
       await api.auth.logout()
     } catch (error) {

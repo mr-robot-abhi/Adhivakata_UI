@@ -261,27 +261,54 @@ export default function NewCasePage() {
     }
 
     try {
+      // Format data for API
+      const apiCaseData = {
+        ...caseData,
+        hearingDate: caseData.hearingDate ? caseData.hearingDate.toISOString() : null,
+        filingDate: caseData.filingDate ? caseData.filingDate.toISOString() : new Date().toISOString(),
+      }
+
       // API call to create a new case
-      const newCase = await api.cases.create(caseData)
+      const newCase = await api.cases.create(apiCaseData)
+      console.log("Case created:", newCase)
 
       // Upload documents if any are selected
       if (selectedFiles.length > 0) {
-        await uploadDocuments(newCase.id || newCase._id)
+        for (const file of selectedFiles) {
+          try {
+            const formData = new FormData()
+            formData.append("file", file)
+            formData.append("caseId", newCase.id || newCase._id)
+            formData.append("name", file.name)
+            formData.append("description", `Document for case ${caseData.title}`)
+
+            await api.documents.upload(formData, (progressEvent) => {
+              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+              setUploadProgress((prev) => ({ ...prev, [file.name]: percentCompleted }))
+            })
+          } catch (uploadError) {
+            console.error(`Error uploading document ${file.name}:`, uploadError)
+          }
+        }
       }
 
       // If the case has a hearing date, create a calendar event
       if (caseData.hearingDate) {
-        const eventData = {
-          title: `Hearing - ${caseData.title}`,
-          date: caseData.hearingDate.toISOString().split("T")[0],
-          time: "10:00 AM",
-          type: "hearing",
-          location: `${caseData.court}, Court Hall ${caseData.courtHall}`,
-          description: `Hearing for case ${caseData.caseNumber || caseData.title}`,
-          caseId: newCase.id || newCase._id,
-        }
+        try {
+          const eventData = {
+            title: `Hearing - ${caseData.title}`,
+            case: newCase.id || newCase._id,
+            start: caseData.hearingDate.toISOString(),
+            end: new Date(caseData.hearingDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
+            type: "hearing",
+            location: `${caseData.court}, Court Hall ${caseData.courtHall}`,
+            description: `Hearing for case ${caseData.caseNumber || caseData.title}`,
+          }
 
-        await api.events.create(eventData)
+          await api.events.create(eventData)
+        } catch (eventError) {
+          console.error("Error creating hearing event:", eventError)
+        }
       }
 
       toast({
@@ -834,9 +861,8 @@ export default function NewCasePage() {
                             </div>
                           ))}
                         </div>
-                      </div>
-                    )}
-
+                      </div>)}
+                      
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Required Documents</h3>
                       <div className="space-y-2">

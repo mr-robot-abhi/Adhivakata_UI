@@ -21,6 +21,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { ChevronLeft, ChevronRight, Plus, CalendarIcon, Clock, MapPin, Users, Edit, Trash } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
+import { toast } from "@/components/ui/use-toast"
+import { api } from "@/lib/api"
 
 // Event types
 const EVENT_TYPES = [
@@ -123,61 +125,197 @@ export default function CalendarPage() {
     setNewEvent((prev) => ({ ...prev, date }))
   }
 
-  // Add new event
-  const addEvent = () => {
-    const dateString = newEvent.date.toISOString().split("T")[0]
-    const newEventObj = {
-      id: `event-${Date.now()}`,
-      ...newEvent,
-      date: dateString,
-    }
+  // Add the following function to fetch events from your backend:
+  const fetchEvents = async () => {
+    try {
+      const response = await api.events.getAll()
 
-    setEvents((prev) => [...prev, newEventObj])
-    setNewEvent({
-      title: "",
-      date: new Date(),
-      time: "",
-      type: "hearing",
-      location: "",
-      description: "",
-      case: "",
-    })
-    setIsDialogOpen(false)
+      if (response && response.data) {
+        // Transform backend events to the format our calendar expects
+        const formattedEvents = response.data.map((event) => ({
+          id: event._id || event.id,
+          title: event.title,
+          date: event.start ? new Date(event.start).toISOString().split("T")[0] : null,
+          time: event.start
+            ? new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : null,
+          type: event.type || "hearing",
+          location: event.location || "",
+          description: event.description || "",
+          case: event.case?.title || "",
+        }))
+
+        setEvents(formattedEvents)
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error)
+      // We'll keep the events state as is or set to empty if it's the first load
+    }
   }
 
-  // Update existing event
-  const updateEvent = () => {
-    if (!selectedEvent) return
+  // Update the useEffect to call this function
+  useEffect(() => {
+    fetchEvents()
+  }, [])
 
-    const dateString = newEvent.date.toISOString().split("T")[0]
-    const updatedEvent = {
-      ...selectedEvent,
-      ...newEvent,
-      date: dateString,
+  // Update the addEvent function:
+  const addEvent = async () => {
+    try {
+      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+
+      // Create event object for the API
+      const apiEvent = {
+        title: newEvent.title,
+        case: newEvent.case === "" ? undefined : newEvent.case,
+        start: startTime.toISOString(),
+        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours after start
+        type: newEvent.type,
+        location: newEvent.location,
+        description: newEvent.description,
+      }
+
+      // Call API to create event
+      const response = await api.events.create(apiEvent)
+
+      // Add to local state with the returned ID
+      const dateString = newEvent.date.toISOString().split("T")[0]
+      const newEventObj = {
+        id: response.data?._id || response.data?.id || `event-${Date.now()}`,
+        ...newEvent,
+        date: dateString,
+      }
+
+      setEvents((prev) => [...prev, newEventObj])
+
+      // Reset form
+      setNewEvent({
+        title: "",
+        date: new Date(),
+        time: "",
+        type: "hearing",
+        location: "",
+        description: "",
+        case: "",
+      })
+
+      setIsDialogOpen(false)
+
+      toast({
+        title: "Event created",
+        description: "Your event has been added to the calendar.",
+      })
+    } catch (error) {
+      console.error("Error creating event:", error)
+      toast({
+        title: "Error creating event",
+        description: "There was an error creating the event. Please try again.",
+        variant: "destructive",
+      })
     }
-
-    setEvents((prev) => prev.map((event) => (event.id === selectedEvent.id ? updatedEvent : event)))
-    setSelectedEvent(null)
-    setNewEvent({
-      title: "",
-      date: new Date(),
-      time: "",
-      type: "hearing",
-      location: "",
-      description: "",
-      case: "",
-    })
-    setIsDialogOpen(false)
-    setIsEditMode(false)
   }
 
-  // Delete event
-  const deleteEvent = () => {
+  // Helper function to combine date and time
+  const combineDateAndTime = (date, timeStr) => {
+    const result = new Date(date)
+
+    if (timeStr) {
+      // Parse time string (e.g., "10:30 AM")
+      const [timePart, ampm] = timeStr.split(" ")
+      let [hours, minutes] = timePart.split(":").map(Number)
+
+      if (ampm && ampm.toUpperCase() === "PM" && hours < 12) {
+        hours += 12
+      } else if (ampm && ampm.toUpperCase() === "AM" && hours === 12) {
+        hours = 0
+      }
+
+      result.setHours(hours, minutes || 0, 0, 0)
+    }
+
+    return result
+  }
+
+  // Update the updateEvent function:
+  const updateEvent = async () => {
     if (!selectedEvent) return
 
-    setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id))
-    setSelectedEvent(null)
-    setShowDeleteDialog(false)
+    try {
+      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+
+      // Create event object for the API
+      const apiEvent = {
+        title: newEvent.title,
+        case: newEvent.case === "" ? undefined : newEvent.case,
+        start: startTime.toISOString(),
+        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours after start
+        type: newEvent.type,
+        location: newEvent.location,
+        description: newEvent.description,
+      }
+
+      // Call API to update event
+      await api.events.update(selectedEvent.id, apiEvent)
+
+      const dateString = newEvent.date.toISOString().split("T")[0]
+      const updatedEvent = {
+        ...selectedEvent,
+        ...newEvent,
+        date: dateString,
+      }
+
+      setEvents((prev) => prev.map((event) => (event.id === selectedEvent.id ? updatedEvent : event)))
+      setSelectedEvent(null)
+      setNewEvent({
+        title: "",
+        date: new Date(),
+        time: "",
+        type: "hearing",
+        location: "",
+        description: "",
+        case: "",
+      })
+
+      setIsDialogOpen(false)
+      setIsEditMode(false)
+
+      toast({
+        title: "Event updated",
+        description: "Your event has been updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating event:", error)
+      toast({
+        title: "Error updating event",
+        description: "There was an error updating the event. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Update the deleteEvent function:
+  const deleteEvent = async () => {
+    if (!selectedEvent) return
+
+    try {
+      // Call API to delete event
+      await api.events.delete(selectedEvent.id)
+
+      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id))
+      setSelectedEvent(null)
+      setShowDeleteDialog(false)
+
+      toast({
+        title: "Event deleted",
+        description: "Your event has been deleted successfully.",
+      })
+    } catch (error) {
+      console.error("Error deleting event:", error)
+      toast({
+        title: "Error deleting event",
+        description: "There was an error deleting the event. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   // Edit event
@@ -222,22 +360,22 @@ export default function CalendarPage() {
   }
 
   // Effect to sync with localStorage
-  useEffect(() => {
-    // In a real app, you would sync with your database here
-    localStorage.setItem("calendar-events", JSON.stringify(events))
-  }, [events])
+  // useEffect(() => {
+  //   // In a real app, you would sync with your database here
+  //   localStorage.setItem("calendar-events", JSON.stringify(events))
+  // }, [events])
 
   // Load events from localStorage on initial load
-  useEffect(() => {
-    const storedEvents = localStorage.getItem("calendar-events")
-    if (storedEvents) {
-      try {
-        setEvents(JSON.parse(storedEvents))
-      } catch (error) {
-        console.error("Error parsing stored events:", error)
-      }
-    }
-  }, [])
+  // useEffect(() => {
+  //   const storedEvents = localStorage.getItem("calendar-events")
+  //   if (storedEvents) {
+  //     try {
+  //       setEvents(JSON.parse(storedEvents))
+  //     } catch (error) {
+  //       console.error("Error parsing stored events:", error)
+  //     }
+  //   }
+  // }, [])
 
   return (
     <div className="space-y-6">

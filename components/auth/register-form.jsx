@@ -35,7 +35,15 @@ export function RegisterForm() {
     setIsLoading(true)
 
     try {
-      await register(email, password, name, accountType)
+      const userData = {
+        name,
+        email,
+        password,
+        role: accountType,
+        // Add any other fields your backend expects
+      }
+
+      await register(userData)
       router.push("/dashboard")
     } catch (error) {
       console.error("Registration error:", error)
