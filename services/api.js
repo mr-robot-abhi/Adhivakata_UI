@@ -420,7 +420,15 @@ const api = {
       })
 
       const data = await handleResponse(response)
-      return data.data || {}
+      return (
+        data.data || {
+          activeCases: 0,
+          urgentCases: 0,
+          upcomingHearings: 0,
+          documents: 0,
+          successRate: "0%",
+        }
+      )
     },
 
     getRecentCases: async () => {
@@ -429,7 +437,8 @@ const api = {
         headers: createHeaders(),
       })
 
-      return handleResponse(response)
+      const data = await handleResponse(response)
+      return data || []
     },
 
     getUpcomingEvents: async () => {
@@ -438,7 +447,8 @@ const api = {
         headers: createHeaders(),
       })
 
-      return handleResponse(response)
+      const data = await handleResponse(response)
+      return data || []
     },
   },
 }

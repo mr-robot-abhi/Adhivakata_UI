@@ -135,7 +135,7 @@ export default function NewCasePage() {
     courtState: "karnataka",
     district: "bengaluru_urban",
     bench: "",
-    courtType: "",
+    courtType: "district_court",
     court: "",
     courtHall: "",
     courtComplex: "",
@@ -245,6 +245,7 @@ export default function NewCasePage() {
     return uploadedDocs
   }
 
+  // Update the handleSubmit function to allow clients to create cases
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
@@ -861,8 +862,9 @@ export default function NewCasePage() {
                             </div>
                           ))}
                         </div>
-                      </div>)}
-                      
+                      </div>
+                    )}
+
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium">Required Documents</h3>
                       <div className="space-y-2">

@@ -221,6 +221,7 @@ export default function DocumentsPage() {
     }
   }
 
+  // Update the handleUploadSubmit function to properly handle file uploads
   const handleUploadSubmit = async (e) => {
     e.preventDefault()
 

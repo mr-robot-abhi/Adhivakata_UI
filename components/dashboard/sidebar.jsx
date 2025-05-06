@@ -18,6 +18,7 @@ const getClientNavItems = () => [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "My Cases", href: "/dashboard/cases", icon: FileText },
   { name: "Documents", href: "/dashboard/documents", icon: FolderOpen },
+  { name: "Calendar", href: "/dashboard/calendar", icon: Calendar },
 ]
 
 const bottomNavItems = [

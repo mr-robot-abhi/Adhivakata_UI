@@ -43,6 +43,7 @@ export function LoginForm() {
     }
   }
 
+  // Update the handleGoogleLogin function to properly handle Google login
   const handleGoogleLogin = async () => {
     setError("")
     setIsLoading(true)
