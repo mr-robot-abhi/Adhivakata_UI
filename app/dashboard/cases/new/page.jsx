@@ -312,6 +312,24 @@ export default function NewCasePage() {
         }
       }
 
+      // After successful case creation:
+      try {
+        // Your existing code to create the case
+        const newCase = await api.cases.create(caseData)
+
+        // Show success message
+        toast({
+          title: "Success",
+          description: "Case created successfully",
+          status: "success",
+        })
+
+        // Force a refresh when navigating back to the cases page
+        router.push("/dashboard/cases?refresh=" + Date.now())
+      } catch (error) {
+        // Your existing error handling
+      }
+
       toast({
         title: "Case created successfully",
         description: "Your new case has been created and saved.",
