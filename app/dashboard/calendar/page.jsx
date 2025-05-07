@@ -22,28 +22,19 @@ import { ChevronLeft, ChevronRight, Plus, CalendarIcon, Clock, MapPin, Users, Ed
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
 import { toast } from "@/components/ui/use-toast"
-import { api } from "@/lib/api"
+import { api, fetchCases } from "@/lib/api"
 
-// Event types
+// Event types aligned with backend EventSchema
 const EVENT_TYPES = [
   { value: "hearing", label: "Court Hearing", color: "bg-blue-100 text-blue-800 border-blue-300" },
-  { value: "meeting", label: "Meeting", color: "bg-green-100 text-green-800 border-green-300" },
-  { value: "deadline", label: "Deadline", color: "bg-red-100 text-red-800 border-red-300" },
-  { value: "conference", label: "Conference", color: "bg-purple-100 text-purple-800 border-purple-300" },
-  { value: "filing", label: "Filing", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-  { value: "other", label: "Other", color: "bg-gray-100 text-gray-800 border-gray-300" },
-]
-
-// Sample cases
-const CASES = [
-  "Smith v. Johnson",
-  "Estate of Williams",
-  "Brown LLC v. Davis Corp",
-  "Miller Divorce",
-  "Thompson Bankruptcy",
-  "Property Dispute",
-  "Insurance Claim",
-  "Employment Matter",
+  { value: "client_meeting", label: "Client Meeting", color: "bg-green-100 text-green-800 border-green-300" },
+  { value: "case_filing", label: "Case Filing", color: "bg-red-100 text-red-800 border-red-300" },
+  { value: "evidence_submission", label: "Evidence Submission", color: "bg-purple-100 text-purple-800 border-purple-300" },
+  { value: "court_visit", label: "Court Visit", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+  { value: "mediation", label: "Mediation", color: "bg-gray-100 text-gray-800 border-gray-300" },
+  { value: "arbitration", label: "Arbitration", color: "bg-gray-100 text-gray-800 border-gray-300" },
+  { value: "judgment", label: "Judgment", color: "bg-gray-100 text-gray-800 border-gray-300" },
+  { value: "appeal", label: "Appeal", color: "bg-gray-100 text-gray-800 border-gray-300" },
 ]
 
 export default function CalendarPage() {
@@ -52,6 +43,7 @@ export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState([])
   const [viewMode, setViewMode] = useState("month")
+  const [cases, setCases] = useState([]) // Store fetched cases
   const [newEvent, setNewEvent] = useState({
     title: "",
     date: new Date(),
@@ -72,6 +64,24 @@ export default function CalendarPage() {
       setIsLawyer(user.role === "lawyer" || user.role === "admin")
     }
   }, [user])
+
+  // Fetch cases from backend
+  useEffect(() => {
+    const loadCases = async () => {
+      try {
+        const fetchedCases = await fetchCases()
+        setCases(fetchedCases)
+      } catch (error) {
+        console.error("Error fetching cases:", error)
+        toast({
+          title: "Error fetching cases",
+          description: "Failed to load cases. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
+    loadCases()
+  }, [])
 
   // Get current month and year
   const currentMonth = currentDate.getMonth()
@@ -125,13 +135,11 @@ export default function CalendarPage() {
     setNewEvent((prev) => ({ ...prev, date }))
   }
 
-  // Add the following function to fetch events from your backend:
+  // Fetch events from backend
   const fetchEvents = async () => {
     try {
       const response = await api.events.getAll()
-
       if (response && response.data) {
-        // Transform backend events to the format our calendar expects
         const formattedEvents = response.data.map((event) => ({
           id: event._id || event.id,
           title: event.title,
@@ -143,51 +151,100 @@ export default function CalendarPage() {
           location: event.location || "",
           description: event.description || "",
           case: event.case?.title || "",
+          caseId: event.case?._id || "",
         }))
-
         setEvents(formattedEvents)
       }
     } catch (error) {
       console.error("Error fetching events:", error)
-      // We'll keep the events state as is or set to empty if it's the first load
     }
   }
 
-  // Update the useEffect to call this function
   useEffect(() => {
     fetchEvents()
   }, [])
 
-  // Update the addEvent function:
+  // Validate time format (e.g., "10:30 AM")
+  const isValidTime = (timeStr) => {
+    const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/i
+    return timeRegex.test(timeStr.trim())
+  }
+
+  // Add new event
   const addEvent = async () => {
     try {
-      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+      // Validate inputs
+      if (!newEvent.title) {
+        toast({
+          title: "Missing title",
+          description: "Please provide a title for the event.",
+          variant: "destructive",
+        })
+        return
+      }
 
-      // Create event object for the API
+      if (!(newEvent.date instanceof Date) || isNaN(newEvent.date)) {
+        toast({
+          title: "Invalid date",
+          description: "Please select a valid date.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!newEvent.time || !isValidTime(newEvent.time)) {
+        toast({
+          title: "Invalid time",
+          description: "Please provide a valid time (e.g., 10:30 AM).",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (newEvent.type !== "client_meeting" && (!newEvent.case || newEvent.case === "none")) {
+        toast({
+          title: "Missing case",
+          description: "Please select a case for this event type.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+      const now = new Date()
+      if (startTime <= now) {
+        toast({
+          title: "Invalid start time",
+          description: "Event start time must be in the future.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const apiEvent = {
         title: newEvent.title,
-        case: newEvent.case === "" ? undefined : newEvent.case,
+        case: newEvent.case === "none" ? undefined : newEvent.case,
         start: startTime.toISOString(),
-        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours after start
+        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         type: newEvent.type,
         location: newEvent.location,
         description: newEvent.description,
       }
 
-      // Call API to create event
-      const response = await api.events.create(apiEvent)
+      // Log the payload for debugging
+      console.log("Sending event payload:", apiEvent)
 
-      // Add to local state with the returned ID
+      const response = await api.events.create(apiEvent)
       const dateString = newEvent.date.toISOString().split("T")[0]
       const newEventObj = {
-        id: response.data?._id || response.data?.id || `event-${Date.now()}`,
+        id: response._id || response.id || `event-${Date.now()}`,
         ...newEvent,
         date: dateString,
+        caseId: newEvent.case,
+        case: newEvent.case === "none" ? "" : cases.find((c) => c._id === newEvent.case)?.title || "",
       }
 
       setEvents((prev) => [...prev, newEventObj])
-
-      // Reset form
       setNewEvent({
         title: "",
         date: new Date(),
@@ -197,9 +254,7 @@ export default function CalendarPage() {
         description: "",
         case: "",
       })
-
       setIsDialogOpen(false)
-
       toast({
         title: "Event created",
         description: "Your event has been added to the calendar.",
@@ -208,7 +263,7 @@ export default function CalendarPage() {
       console.error("Error creating event:", error)
       toast({
         title: "Error creating event",
-        description: "There was an error creating the event. Please try again.",
+        description: error.message || "There was an error creating the event. Please try again.",
         variant: "destructive",
       })
     }
@@ -216,51 +271,102 @@ export default function CalendarPage() {
 
   // Helper function to combine date and time
   const combineDateAndTime = (date, timeStr) => {
+    if (!(date instanceof Date) || isNaN(date)) {
+      throw new Error("Invalid date provided")
+    }
+
     const result = new Date(date)
+    if (!timeStr || !isValidTime(timeStr)) {
+      throw new Error("Invalid time format. Use HH:MM AM/PM (e.g., 10:30 AM)")
+    }
 
-    if (timeStr) {
-      // Parse time string (e.g., "10:30 AM")
-      const [timePart, ampm] = timeStr.split(" ")
-      let [hours, minutes] = timePart.split(":").map(Number)
+    const [timePart, ampm] = timeStr.trim().split(" ")
+    const [hours, minutes] = timePart.split(":").map(Number)
 
-      if (ampm && ampm.toUpperCase() === "PM" && hours < 12) {
-        hours += 12
-      } else if (ampm && ampm.toUpperCase() === "AM" && hours === 12) {
-        hours = 0
-      }
-
-      result.setHours(hours, minutes || 0, 0, 0)
+    if (ampm.toUpperCase() === "PM" && hours < 12) {
+      result.setHours(hours + 12, minutes, 0, 0)
+    } else if (ampm.toUpperCase() === "AM" && hours === 12) {
+      result.setHours(0, minutes, 0, 0)
+    } else {
+      result.setHours(hours, minutes, 0, 0)
     }
 
     return result
   }
 
-  // Update the updateEvent function:
+  // Update event
   const updateEvent = async () => {
     if (!selectedEvent) return
-
     try {
-      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+      // Validate inputs
+      if (!newEvent.title) {
+        toast({
+          title: "Missing title",
+          description: "Please provide a title for the event.",
+          variant: "destructive",
+        })
+        return
+      }
 
-      // Create event object for the API
+      if (!(newEvent.date instanceof Date) || isNaN(newEvent.date)) {
+        toast({
+          title: "Invalid date",
+          description: "Please select a valid date.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (!newEvent.time || !isValidTime(newEvent.time)) {
+        toast({
+          title: "Invalid time",
+          description: "Please provide a valid time (e.g., 10:30 AM).",
+          variant: "destructive",
+        })
+        return
+      }
+
+      if (newEvent.type !== "client_meeting" && (!newEvent.case || newEvent.case === "none")) {
+        toast({
+          title: "Missing case",
+          description: "Please select a case for this event type.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const startTime = combineDateAndTime(newEvent.date, newEvent.time)
+      const now = new Date()
+      if (startTime <= now) {
+        toast({
+          title: "Invalid start time",
+          description: "Event start time must be in the future.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const apiEvent = {
         title: newEvent.title,
-        case: newEvent.case === "" ? undefined : newEvent.case,
+        case: newEvent.case === "none" ? undefined : newEvent.case,
         start: startTime.toISOString(),
-        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours after start
+        end: new Date(startTime.getTime() + 2 * 60 * 60 * 1000).toISOString(),
         type: newEvent.type,
         location: newEvent.location,
         description: newEvent.description,
       }
 
-      // Call API to update event
-      await api.events.update(selectedEvent.id, apiEvent)
+      // Log the payload for debugging
+      console.log("Updating event payload:", apiEvent)
 
+      await api.events.update(selectedEvent.id, apiEvent)
       const dateString = newEvent.date.toISOString().split("T")[0]
       const updatedEvent = {
         ...selectedEvent,
         ...newEvent,
         date: dateString,
+        caseId: newEvent.case,
+        case: newEvent.case === "none" ? "" : cases.find((c) => c._id === newEvent.case)?.title || "",
       }
 
       setEvents((prev) => prev.map((event) => (event.id === selectedEvent.id ? updatedEvent : event)))
@@ -274,10 +380,8 @@ export default function CalendarPage() {
         description: "",
         case: "",
       })
-
       setIsDialogOpen(false)
       setIsEditMode(false)
-
       toast({
         title: "Event updated",
         description: "Your event has been updated successfully.",
@@ -292,18 +396,14 @@ export default function CalendarPage() {
     }
   }
 
-  // Update the deleteEvent function:
+  // Delete event
   const deleteEvent = async () => {
     if (!selectedEvent) return
-
     try {
-      // Call API to delete event
       await api.events.delete(selectedEvent.id)
-
       setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id))
       setSelectedEvent(null)
       setShowDeleteDialog(false)
-
       toast({
         title: "Event deleted",
         description: "Your event has been deleted successfully.",
@@ -328,7 +428,7 @@ export default function CalendarPage() {
       type: event.type || "hearing",
       location: event.location || "",
       description: event.description || "",
-      case: event.case || "",
+      case: event.caseId || "",
     })
     setIsEditMode(true)
     setIsDialogOpen(true)
@@ -358,24 +458,6 @@ export default function CalendarPage() {
     const eventType = EVENT_TYPES.find((t) => t.value === type)
     return eventType ? eventType.color : "bg-gray-100 text-gray-800 border-gray-300"
   }
-
-  // Effect to sync with localStorage
-  // useEffect(() => {
-  //   // In a real app, you would sync with your database here
-  //   localStorage.setItem("calendar-events", JSON.stringify(events))
-  // }, [events])
-
-  // Load events from localStorage on initial load
-  // useEffect(() => {
-  //   const storedEvents = localStorage.getItem("calendar-events")
-  //   if (storedEvents) {
-  //     try {
-  //       setEvents(JSON.parse(storedEvents))
-  //     } catch (error) {
-  //       console.error("Error parsing stored events:", error)
-  //     }
-  //   }
-  // }, [])
 
   return (
     <div className="space-y-6">
@@ -454,10 +536,12 @@ export default function CalendarPage() {
                         <SelectValue placeholder="Select case" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {CASES.map((caseItem) => (
-                          <SelectItem key={caseItem} value={caseItem}>
-                            {caseItem}
+                        <SelectItem value="none" disabled={newEvent.type !== "client_meeting"}>
+                          None
+                        </SelectItem>
+                        {cases.map((caseItem) => (
+                          <SelectItem key={caseItem._id} value={caseItem._id}>
+                            {caseItem.title}
                           </SelectItem>
                         ))}
                       </SelectContent>
