@@ -12,7 +12,7 @@ import api from "@/services/api"
 
 export default function CasesPage() {
   const { user } = useAuth()
-  const [isLawyer, setIsLawyer] = useState(true)
+  const [isLawyer, setIsLawyer] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [caseFilter, setCaseFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("All Categories")
@@ -92,7 +92,10 @@ export default function CasesPage() {
   }
 
   // Map and filter cases based on search and filters
-  const filteredCases = cases.map(mapCaseFields).filter((caseItem) => {
+  // Remove duplicates by using a Map with case ID as key
+  const uniqueCases = Array.from(new Map(cases.map((caseItem) => [caseItem._id || caseItem.id, caseItem])).values())
+
+  const filteredCases = uniqueCases.map(mapCaseFields).filter((caseItem) => {
     const matchesSearch =
       caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (caseItem.number && caseItem.number.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -113,8 +116,8 @@ export default function CasesPage() {
   })
 
   // Get unique values for filters
-  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.caseType || c.type).filter(Boolean))]
-  const districts = ["all", ...new Set(cases.map((c) => c.district).filter(Boolean))]
+  const caseTypes = ["All Categories", ...new Set(uniqueCases.map((c) => c.caseType || c.type).filter(Boolean))]
+  const districts = ["all", ...new Set(uniqueCases.map((c) => c.district).filter(Boolean))]
 
   if (loading) {
     return (
@@ -137,14 +140,12 @@ export default function CasesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Cases</h1>
-        {isLawyer && (
-          <Link href="/dashboard/cases/new">
-            <Button>
-              <PlusIcon className="mr-2 h-4 w-4" />
-              New Case
-            </Button>
-          </Link>
-        )}
+        <Link href="/dashboard/cases/new">
+          <Button>
+            <PlusIcon className="mr-2 h-4 w-4" />
+            New Case
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -219,7 +220,7 @@ export default function CasesPage() {
                   <th className="py-3 text-left font-medium">District</th>
                   <th className="py-3 text-left font-medium">Status</th>
                   <th className="py-3 text-left font-medium">Next Hearing</th>
-                  <th className="py-3 text-left font-medium sr-only">Actions</th>
+                  <th className="py-3 text-left font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -252,8 +253,8 @@ export default function CasesPage() {
                       {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
                     </td>
                     <td className="py-3 text-right">
-                      <Button variant="ghost" size="sm">
-                        View
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
                       </Button>
                     </td>
                   </tr>
