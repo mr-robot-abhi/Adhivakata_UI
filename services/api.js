@@ -453,4 +453,26 @@ const api = {
   },
 }
 
+// Add this function to ensure consistent case data structure
+export const normalizeCaseData = (caseData) => {
+  // If the case data is already in the expected format, return it
+  if (caseData.title && (caseData.caseNumber || caseData.number)) {
+    return caseData
+  }
+
+  // Otherwise, transform it to the expected format
+  return {
+    id: caseData._id || caseData.id,
+    title: caseData.title || "Untitled Case",
+    number: caseData.caseNumber || caseData.number || "No Number",
+    type: caseData.caseType || caseData.type || "Other",
+    status: caseData.status || "active",
+    court: caseData.court || caseData.courtType || "Not specified",
+    courtHall: caseData.courtHall || "N/A",
+    district: caseData.district || "Not specified",
+    nextHearing: caseData.nextHearingDate || caseData.hearingDate || null,
+    client: caseData.client?.name || caseData.client || "No Client",
+  }
+}
+
 export default api
