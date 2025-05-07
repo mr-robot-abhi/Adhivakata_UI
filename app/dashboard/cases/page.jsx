@@ -44,15 +44,23 @@ export default function CasesPage() {
         // API call to fetch cases
         const response = await api.cases.getAll(filters)
 
-        // Ensure response is an array
-        const casesArray = Array.isArray(response) ? response : response.data || []
-
-        // Validate that casesArray contains valid case objects
-        if (!casesArray.every(item => item && typeof item === 'object' && 'id' in item)) {
-          throw new Error("Invalid case data received from API")
+        // Check if response is an array directly
+        if (Array.isArray(response)) {
+          setCases(response)
         }
-
-        setCases(casesArray)
+        // If response is an object with a data property that's an array
+        else if (response && Array.isArray(response.data)) {
+          setCases(response.data)
+        }
+        // If we have a data property but it's not an array
+        else if (response && response.data) {
+          setCases([response.data].flat())
+        }
+        // Fallback to sample data if no valid response
+        else {
+          console.warn("Invalid response format, using fallback data")
+          setCases(isLawyer ? lawyerCases : clientCases)
+        }
       } catch (error) {
         console.error("Error fetching cases:", error)
         setError("Failed to load cases. Please try again.")
@@ -67,29 +75,45 @@ export default function CasesPage() {
     fetchCases()
   }, [isLawyer, searchTerm, caseFilter, categoryFilter, statusFilter, dateFilter])
 
-  // Filter cases based on search and filters
-  const filteredCases = cases.filter((caseItem) => {
-    // Ensure caseItem has required properties
-    if (!caseItem || !caseItem.title || !caseItem.number || !caseItem.court) {
-      return false
+  // Helper function to map API case fields to UI fields
+  const mapCaseFields = (caseItem) => {
+    return {
+      id: caseItem._id || caseItem.id,
+      title: caseItem.title,
+      number: caseItem.caseNumber || caseItem.number,
+      type: caseItem.caseType || caseItem.type,
+      client: caseItem.client?.name || caseItem.client,
+      court: caseItem.court || caseItem.courtType || "Not specified",
+      courtHall: caseItem.courtHall || "N/A",
+      district: caseItem.district || "Not specified",
+      status: caseItem.status ? caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1) : "Active",
+      nextHearing: caseItem.nextHearingDate || caseItem.hearingDate || caseItem.nextHearing,
     }
+  }
 
+  // Map and filter cases based on search and filters
+  const filteredCases = cases.map(mapCaseFields).filter((caseItem) => {
     const matchesSearch =
       caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase())
+      (caseItem.number && caseItem.number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (caseItem.court && caseItem.court.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesStatus =
-      statusFilter === "All Statuses" || caseItem.status.toLowerCase() === statusFilter.toLowerCase()
+      statusFilter === "All Statuses" ||
+      (caseItem.status && caseItem.status.toLowerCase() === statusFilter.toLowerCase())
+
     const matchesType =
-      categoryFilter === "All Categories" || caseItem.type.toLowerCase() === categoryFilter.toLowerCase()
-    const matchesDistrict = caseFilter === "all" || caseItem.district.toLowerCase() === caseFilter.toLowerCase()
+      categoryFilter === "All Categories" ||
+      (caseItem.type && caseItem.type.toLowerCase() === categoryFilter.toLowerCase())
+
+    const matchesDistrict =
+      caseFilter === "all" || (caseItem.district && caseItem.district.toLowerCase() === caseFilter.toLowerCase())
 
     return matchesSearch && matchesStatus && matchesType && matchesDistrict
   })
 
   // Get unique values for filters
-  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.type).filter(Boolean))]
+  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.caseType || c.type).filter(Boolean))]
   const districts = ["all", ...new Set(cases.map((c) => c.district).filter(Boolean))]
 
   if (loading) {
