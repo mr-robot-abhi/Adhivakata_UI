@@ -47,6 +47,7 @@ export default function CasesPage() {
         const response = await api.cases.getAll(filters)
         console.log("API response:", response)
 
+<<<<<<< HEAD
         // Check if response is an object with data property
         if (response && response.data && Array.isArray(response.data)) {
           // Remove duplicates by using a Map with case ID as key
@@ -72,6 +73,24 @@ export default function CasesPage() {
           console.error("Invalid response format:", response)
           setError("Failed to load cases. Please try again.")
           setCases([])
+=======
+        // Check if response is an array directly
+        if (Array.isArray(response)) {
+          setCases(response)
+        }
+        // If response is an object with a data property that's an array
+        else if (response && Array.isArray(response.data)) {
+          setCases(response.data)
+        }
+        // If we have a data property but it's not an array
+        else if (response && response.data) {
+          setCases([response.data].flat())
+        }
+        // Fallback to sample data if no valid response
+        else {
+          console.warn("Invalid response format, using fallback data")
+          setCases(isLawyer ? lawyerCases : clientCases)
+>>>>>>> 5d3e0988491701256d1acf16341ab18b32171a39
         }
       } catch (error) {
         console.error("Error fetching cases:", error)
@@ -104,7 +123,14 @@ export default function CasesPage() {
   }
 
   // Map and filter cases based on search and filters
+<<<<<<< HEAD
   const filteredCases = cases.map(mapCaseFields).filter((caseItem) => {
+=======
+  // Remove duplicates by using a Map with case ID as key
+  const uniqueCases = Array.from(new Map(cases.map((caseItem) => [caseItem._id || caseItem.id, caseItem])).values())
+
+  const filteredCases = uniqueCases.map(mapCaseFields).filter((caseItem) => {
+>>>>>>> 5d3e0988491701256d1acf16341ab18b32171a39
     const matchesSearch =
       caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (caseItem.number && caseItem.number.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -125,8 +151,13 @@ export default function CasesPage() {
   })
 
   // Get unique values for filters
+<<<<<<< HEAD
   const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.caseType || c.type).filter(Boolean))]
   const districts = ["all", ...new Set(cases.map((c) => c.district).filter(Boolean))]
+=======
+  const caseTypes = ["All Categories", ...new Set(uniqueCases.map((c) => c.caseType || c.type).filter(Boolean))]
+  const districts = ["all", ...new Set(uniqueCases.map((c) => c.district).filter(Boolean))]
+>>>>>>> 5d3e0988491701256d1acf16341ab18b32171a39
 
   if (loading) {
     return (
@@ -280,7 +311,33 @@ export default function CasesPage() {
                       <Link href="/dashboard/cases/new" className="text-primary hover:underline">
                         add a new case
                       </Link>
+<<<<<<< HEAD
                       .
+=======
+                    </td>
+                    <td className="py-3">{caseItem.number}</td>
+                    <td className="py-3">{caseItem.type}</td>
+                    {isLawyer && <td className="py-3">{caseItem.client}</td>}
+                    <td className="py-3">{caseItem.court}</td>
+                    <td className="py-3">{caseItem.courtHall}</td>
+                    <td className="py-3">{caseItem.district}</td>
+                    <td className="py-3">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {caseItem.status}
+                      </span>
+                    </td>
+                    <td className="py-3">
+                      {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td className="py-3 text-right">
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
+                      </Button>
+>>>>>>> 5d3e0988491701256d1acf16341ab18b32171a39
                     </td>
                   </tr>
                 )}

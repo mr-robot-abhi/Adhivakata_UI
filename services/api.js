@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://adhivakta-gateway.onrender.com/api"
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {
