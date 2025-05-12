@@ -219,27 +219,37 @@ export default function NewCasePage() {
 
     const uploadedDocs = []
 
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i]
-      setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+    try {
+      // Create a single FormData object for all files
+      const formData = new FormData()
+      
+      // Append all files with the same field name 'files'
+      selectedFiles.forEach(file => {
+        formData.append("files", file)
+        setUploadProgress((prev) => ({ ...prev, [file.name]: 0 }))
+      })
+      
+      // Add metadata
+      formData.append("name", "Files for " + caseData.title)
+      formData.append("description", `Documents for case ${caseData.title}`)
+      formData.append("category", caseData.caseType)
 
-      try {
-        const formData = new FormData()
-        formData.append("file", file)
-        formData.append("caseId", caseId)
-        formData.append("name", file.name)
-        formData.append("description", `Document for case ${caseData.title}`)
-
-        // Upload the document
-        const response = await api.documents.upload(formData, (progressEvent) => {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-          setUploadProgress((prev) => ({ ...prev, [file.name]: percentCompleted }))
+      // Upload all documents in a single request
+      const response = await api.documents.uploadToCaseId(caseId, formData, (progressEvent) => {
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        // Update progress for all files
+        const newProgress = {}
+        selectedFiles.forEach(file => {
+          newProgress[file.name] = percentCompleted
         })
+        setUploadProgress(prev => ({ ...prev, ...newProgress }))
+      })
 
-        uploadedDocs.push(response.data)
-      } catch (error) {
-        console.error(`Error uploading document ${file.name}:`, error)
+      if (response && response.data) {
+        uploadedDocs.push(...(Array.isArray(response.data) ? response.data : [response.data]))
       }
+    } catch (error) {
+      console.error(`Error uploading documents:`, error)
     }
 
     return uploadedDocs
@@ -275,21 +285,11 @@ export default function NewCasePage() {
 
       // Upload documents if any are selected
       if (selectedFiles.length > 0) {
-        for (const file of selectedFiles) {
-          try {
-            const formData = new FormData()
-            formData.append("file", file)
-            formData.append("caseId", newCase.id || newCase._id)
-            formData.append("name", file.name)
-            formData.append("description", `Document for case ${caseData.title}`)
-
-            await api.documents.upload(formData, (progressEvent) => {
-              const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-              setUploadProgress((prev) => ({ ...prev, [file.name]: percentCompleted }))
-            })
-          } catch (uploadError) {
-            console.error(`Error uploading document ${file.name}:`, uploadError)
-          }
+        try {
+          await uploadDocuments(newCase.id || newCase._id)
+          console.log('Documents uploaded successfully')
+        } catch (uploadError) {
+          console.error('Error uploading documents:', uploadError)
         }
       }
 
@@ -310,6 +310,24 @@ export default function NewCasePage() {
         } catch (eventError) {
           console.error("Error creating hearing event:", eventError)
         }
+      }
+
+      // After successful case creation:
+      try {
+        // Your existing code to create the case
+        const newCase = await api.cases.create(caseData)
+
+        // Show success message
+        toast({
+          title: "Success",
+          description: "Case created successfully",
+          status: "success",
+        })
+
+        // Force a refresh when navigating back to the cases page
+        router.push("/dashboard/cases?refresh=" + Date.now())
+      } catch (error) {
+        // Your existing error handling
       }
 
       toast({
@@ -753,7 +771,9 @@ export default function NewCasePage() {
                       <h3 className="text-lg font-medium">Defendant/Respondent/Accused/Opponent Details</h3>
                       <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label htmlFor="opposingRole">Role</Label>
+                          <Label
+
+                          htmlFor="opposingRole">Role</Label>
                           <Select
                             value={caseData.opposingRole}
                             onValueChange={(value) => handleSelectChange("opposingRole", value)}

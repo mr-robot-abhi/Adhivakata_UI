@@ -171,8 +171,7 @@ const api = {
         headers: createHeaders(),
       })
 
-      const data = await handleResponse(response)
-      return data.data
+      return handleResponse(response)
     },
 
     create: async (caseData) => {
@@ -265,6 +264,16 @@ const api = {
       return data.data
     },
 
+    getByCaseId: async (caseId) => {
+      const response = await fetch(`${API_URL}/documents?caseId=${caseId}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+
     upload: async (formData, onProgress) => {
       // Create XMLHttpRequest to track upload progress
       return new Promise((resolve, reject) => {
@@ -300,6 +309,53 @@ const api = {
 
         // Setup and send request
         xhr.open("POST", `${API_URL}/documents/upload`)
+
+        // Add authorization header
+        const token = getToken()
+        if (token) {
+          xhr.setRequestHeader("Authorization", `Bearer ${token}`)
+        }
+
+        xhr.send(formData)
+      })
+    },
+    
+    // Upload documents directly to a case using multer
+    uploadToCaseId: async (caseId, formData, onProgress) => {
+      // Create XMLHttpRequest to track upload progress
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest()
+
+        // Setup progress tracking
+        if (onProgress) {
+          xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+              onProgress(event)
+            }
+          })
+        }
+
+        // Handle response
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText)
+              resolve(data)
+            } catch (error) {
+              reject(new Error("Invalid JSON response"))
+            }
+          } else {
+            reject(new Error(`Upload failed with status ${xhr.status}`))
+          }
+        }
+
+        // Handle errors
+        xhr.onerror = () => {
+          reject(new Error("Network error occurred during upload"))
+        }
+
+        // Setup and send request
+        xhr.open("POST", `${API_URL}/cases/${caseId}/documents`)
 
         // Add authorization header
         const token = getToken()
@@ -380,6 +436,16 @@ const api = {
       return data.data
     },
 
+    getByCaseId: async (caseId) => {
+      const response = await fetch(`${API_URL}/events?caseId=${caseId}`, {
+        method: "GET",
+        headers: createHeaders(),
+      })
+
+      const data = await handleResponse(response)
+      return data.data || []
+    },
+
     create: async (eventData) => {
       const response = await fetch(`${API_URL}/events`, {
         method: "POST",
@@ -451,6 +517,28 @@ const api = {
       return data || []
     },
   },
+}
+
+// Add this function to ensure consistent case data structure
+export const normalizeCaseData = (caseData) => {
+  // If the case data is already in the expected format, return it
+  if (caseData.title && (caseData.caseNumber || caseData.number)) {
+    return caseData
+  }
+
+  // Otherwise, transform it to the expected format
+  return {
+    id: caseData._id || caseData.id,
+    title: caseData.title || "Untitled Case",
+    number: caseData.caseNumber || caseData.number || "No Number",
+    type: caseData.caseType || caseData.type || "Other",
+    status: caseData.status || "active",
+    court: caseData.court || caseData.courtType || "Not specified",
+    courtHall: caseData.courtHall || "N/A",
+    district: caseData.district || "Not specified",
+    nextHearing: caseData.nextHearingDate || caseData.hearingDate || null,
+    client: caseData.client?.name || caseData.client || "No Client",
+  }
 }
 
 export default api

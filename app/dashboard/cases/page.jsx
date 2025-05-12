@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import api from "@/services/api"
 
 export default function CasesPage() {
+  const router = useRouter()
   const { user } = useAuth()
-  const [isLawyer, setIsLawyer] = useState(true)
+  const [isLawyer, setIsLawyer] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [caseFilter, setCaseFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("All Categories")
@@ -43,20 +45,38 @@ export default function CasesPage() {
 
         // API call to fetch cases
         const response = await api.cases.getAll(filters)
+        console.log("API response:", response)
 
-        // Ensure response is an array
-        const casesArray = Array.isArray(response) ? response : response.data || []
-
-        // Validate that casesArray contains valid case objects
-        if (!casesArray.every(item => item && typeof item === 'object' && 'id' in item)) {
-          throw new Error("Invalid case data received from API")
+        // Check if response is an object with data property
+        if (response && response.data && Array.isArray(response.data)) {
+          // Remove duplicates by using a Map with case ID as key
+          const uniqueCases = Array.from(
+            new Map(response.data.map((caseItem) => [caseItem._id || caseItem.id, caseItem])).values(),
+          )
+          setCases(uniqueCases)
         }
-
-        setCases(casesArray)
+        // If response is a direct array
+        else if (Array.isArray(response)) {
+          // Remove duplicates by using a Map with case ID as key
+          const uniqueCases = Array.from(
+            new Map(response.map((caseItem) => [caseItem._id || caseItem.id, caseItem])).values(),
+          )
+          setCases(uniqueCases)
+        }
+        // If we have a single case object
+        else if (response && typeof response === 'object') {
+          setCases([response])
+        }
+        // Handle error case
+        else {
+          console.error("Invalid response format:", response)
+          setError("Failed to load cases. Please try again.")
+          setCases([])
+        }
       } catch (error) {
         console.error("Error fetching cases:", error)
         setError("Failed to load cases. Please try again.")
-
+        setCases([])
         // Fallback to sample data
         setCases(isLawyer ? lawyerCases : clientCases)
       } finally {
@@ -67,29 +87,45 @@ export default function CasesPage() {
     fetchCases()
   }, [isLawyer, searchTerm, caseFilter, categoryFilter, statusFilter, dateFilter])
 
-  // Filter cases based on search and filters
-  const filteredCases = cases.filter((caseItem) => {
-    // Ensure caseItem has required properties
-    if (!caseItem || !caseItem.title || !caseItem.number || !caseItem.court) {
-      return false
+  // Helper function to map API case fields to UI fields
+  const mapCaseFields = (caseItem) => {
+    return {
+      id: caseItem._id || caseItem.id,
+      title: caseItem.title,
+      number: caseItem.caseNumber || caseItem.number,
+      type: caseItem.caseType || caseItem.type,
+      client: caseItem.client?.name || caseItem.client,
+      court: caseItem.court || caseItem.courtType || "Not specified",
+      courtHall: caseItem.courtHall || "N/A",
+      district: caseItem.district || "Not specified",
+      status: caseItem.status ? caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1) : "Active",
+      nextHearing: caseItem.nextHearingDate || caseItem.hearingDate || caseItem.nextHearing,
     }
+  }
 
+  // Map and filter cases based on search and filters
+  const filteredCases = cases.map(mapCaseFields).filter((caseItem) => {
     const matchesSearch =
       caseItem.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      caseItem.court.toLowerCase().includes(searchTerm.toLowerCase())
+      (caseItem.number && caseItem.number.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (caseItem.court && caseItem.court.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const matchesStatus =
-      statusFilter === "All Statuses" || caseItem.status.toLowerCase() === statusFilter.toLowerCase()
+      statusFilter === "All Statuses" ||
+      (caseItem.status && caseItem.status.toLowerCase() === statusFilter.toLowerCase())
+
     const matchesType =
-      categoryFilter === "All Categories" || caseItem.type.toLowerCase() === categoryFilter.toLowerCase()
-    const matchesDistrict = caseFilter === "all" || caseItem.district.toLowerCase() === caseFilter.toLowerCase()
+      categoryFilter === "All Categories" ||
+      (caseItem.type && caseItem.type.toLowerCase() === categoryFilter.toLowerCase())
+
+    const matchesDistrict =
+      caseFilter === "all" || (caseItem.district && caseItem.district.toLowerCase() === caseFilter.toLowerCase())
 
     return matchesSearch && matchesStatus && matchesType && matchesDistrict
   })
 
   // Get unique values for filters
-  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.type).filter(Boolean))]
+  const caseTypes = ["All Categories", ...new Set(cases.map((c) => c.caseType || c.type).filter(Boolean))]
   const districts = ["all", ...new Set(cases.map((c) => c.district).filter(Boolean))]
 
   if (loading) {
@@ -113,14 +149,12 @@ export default function CasesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Cases</h1>
-        {isLawyer && (
-          <Link href="/dashboard/cases/new">
-            <Button>
-              <PlusIcon className="mr-2 h-4 w-4" />
-              New Case
-            </Button>
-          </Link>
-        )}
+        <Link href="/dashboard/cases/new">
+          <Button>
+            <PlusIcon className="mr-2 h-4 w-4" />
+            New Case
+          </Button>
+        </Link>
       </div>
 
       <Card>
@@ -195,45 +229,61 @@ export default function CasesPage() {
                   <th className="py-3 text-left font-medium">District</th>
                   <th className="py-3 text-left font-medium">Status</th>
                   <th className="py-3 text-left font-medium">Next Hearing</th>
-                  <th className="py-3 text-left font-medium sr-only">Actions</th>
+                  <th className="py-3 text-left font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredCases.map((caseItem) => (
-                  <tr key={caseItem.id} className="border-b hover:bg-muted/50">
-                    <td className="py-3">
-                      <Link
-                        href={`/dashboard/cases/${caseItem.id}`}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {caseItem.title}
+                {filteredCases.length > 0 ? (
+                  filteredCases.map((caseItem) => (
+                    <tr key={caseItem.id} className="border-b hover:bg-muted/50">
+                      <td className="py-3">
+                        <Link
+                          href={`/dashboard/cases/${caseItem.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {caseItem.title}
+                        </Link>
+                      </td>
+                      <td className="py-3">{caseItem.number}</td>
+                      <td className="py-3">{caseItem.type}</td>
+                      {isLawyer && <td className="py-3">{caseItem.client}</td>}
+                      <td className="py-3">{caseItem.court}</td>
+                      <td className="py-3">{caseItem.courtHall}</td>
+                      <td className="py-3">{caseItem.district}</td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {caseItem.status}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
+                      </td>
+                      <td className="py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => router.push(`/dashboard/cases/${caseItem.id}`)}
+                        >
+                          View
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={isLawyer ? 10 : 9} className="py-6 text-center text-muted-foreground">
+                      No cases found. Try adjusting your filters or{" "}
+                      <Link href="/dashboard/cases/new" className="text-primary hover:underline">
+                        add a new case
                       </Link>
-                    </td>
-                    <td className="py-3">{caseItem.number}</td>
-                    <td className="py-3">{caseItem.type}</td>
-                    {isLawyer && <td className="py-3">{caseItem.client}</td>}
-                    <td className="py-3">{caseItem.court}</td>
-                    <td className="py-3">{caseItem.courtHall}</td>
-                    <td className="py-3">{caseItem.district}</td>
-                    <td className="py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                          caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {caseItem.status}
-                      </span>
-                    </td>
-                    <td className="py-3">
-                      {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
-                    </td>
-                    <td className="py-3 text-right">
-                      <Button variant="ghost" size="sm">
-                        View
-                      </Button>
+                      .
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

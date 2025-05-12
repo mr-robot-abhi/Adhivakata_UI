@@ -292,7 +292,12 @@ function LawyerDashboard({ data }) {
                         {caseItem.type} • {caseItem.court}
                       </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">{caseItem.date}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm text-muted-foreground">{caseItem.date}</p>
+                      <Link href={`/dashboard/cases/${caseItem.id}`}>
+                        <Button size="sm" variant="outline">View</Button>
+                      </Link>
+                    </div>
                   </div>
                 ))
               ) : (

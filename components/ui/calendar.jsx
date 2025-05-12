@@ -9,6 +9,7 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn("p-3", className)}
+      weekStartsOn={0} // Fix day alignment: Sunday as first day
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
@@ -17,7 +18,7 @@ export function Calendar({ className, classNames, showOutsideDays = true, ...pro
         nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
