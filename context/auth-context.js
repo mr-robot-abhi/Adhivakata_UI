@@ -107,6 +107,10 @@ export const AuthProvider = ({ children }) => {
   }
 
   const register = async (userData) => {
+  // Ensure only 'lawyer' and 'client' roles
+  if (!['lawyer', 'client'].includes(userData.role)) {
+    userData.role = 'client';
+  }
     try {
       const { email, password, name, role } = userData
 

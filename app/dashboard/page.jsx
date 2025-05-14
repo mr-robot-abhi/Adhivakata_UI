@@ -277,8 +277,8 @@ function LawyerDashboard({ data }) {
           <CardContent>
             <div className="space-y-4">
               {recentCases?.length > 0 ? (
-                recentCases.map((caseItem, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                Array.from(new Map(recentCases.map(c => [c.caseNumber || c.id, c])).values()).map((caseItem, index) => (
+                  <div key={caseItem.id || caseItem.caseNumber || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
                       <div className="flex items-center">
                         <p className="font-medium">{caseItem.title}</p>
@@ -454,8 +454,8 @@ function ClientDashboard({ data }) {
           <CardContent>
             <div className="space-y-4">
               {recentCases?.length > 0 ? (
-                recentCases.map((caseItem, index) => (
-                  <Link href={`/dashboard/cases/${caseItem.id}`} key={index}>
+                Array.from(new Map(recentCases.map(c => [c.caseNumber || c.id, c])).values()).map((caseItem, index) => (
+                  <Link href={`/dashboard/cases/${caseItem.id}`} key={caseItem.id || caseItem.caseNumber || index}>
                     <div className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-muted/50 p-2 rounded-md cursor-pointer">
                       <div>
                         <p className="font-medium">{caseItem.title}</p>

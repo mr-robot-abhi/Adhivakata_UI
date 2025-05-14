@@ -90,7 +90,7 @@ export default function CasesPage() {
       courtHall: caseItem.courtHall || "N/A",
       district: caseItem.district || "Not specified",
       status: caseItem.status ? caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1) : "Active",
-      nextHearing: caseItem.nextHearingDate || caseItem.hearingDate || caseItem.nextHearing,
+      nextHearing: caseItem.nextHearingDate,
     }
   }
 

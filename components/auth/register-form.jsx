@@ -109,15 +109,14 @@ export function RegisterForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="account-type">Account type</Label>
-        <Select value={accountType} onValueChange={setAccountType} disabled={isLoading}>
-          <SelectTrigger id="account-type">
-            <SelectValue placeholder="Select account type" />
+        <Label htmlFor="accountType">Account Type</Label>
+        <Select value={accountType} onValueChange={setAccountType}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select role" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="lawyer">Lawyer</SelectItem>
             <SelectItem value="client">Client</SelectItem>
-            <SelectItem value="admin">Administrator</SelectItem>
           </SelectContent>
         </Select>
       </div>
