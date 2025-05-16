@@ -455,20 +455,21 @@ function ClientDashboard({ data }) {
             <div className="space-y-4">
               {recentCases?.length > 0 ? (
                 Array.from(new Map(recentCases.map(c => [c.caseNumber || c.id, c])).values()).map((caseItem, index) => (
-                  <Link href={`/dashboard/cases/${caseItem.id}`} key={caseItem.id || caseItem.caseNumber || index}>
-                    <div className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-muted/50 p-2 rounded-md cursor-pointer">
-                      <div>
-                        <p className="font-medium">{caseItem.title}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {caseItem.type} • {caseItem.court}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">Next Hearing</p>
-                        <p className="text-sm font-medium">{caseItem.nextHearing || "N/A"}</p>
-                      </div>
+                  <div key={caseItem.id || caseItem.caseNumber || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-muted/50 p-2 rounded-md">
+                    <div>
+                      <p className="font-medium">{caseItem.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {caseItem.type} • {caseItem.court}
+                      </p>
                     </div>
-                  </Link>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground">Next Hearing</p>
+                      <p className="text-sm font-medium">{caseItem.nextHearing || "N/A"}</p>
+                      <Link href={`/dashboard/cases/${caseItem.id}`}>
+                        <Button size="sm" variant="outline">View</Button>
+                      </Link>
+                    </div>
+                  </div>
                 ))
               ) : (
                 <div className="text-center py-6">
