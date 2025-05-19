@@ -87,7 +87,7 @@ const api = {
 
   users: {
     getProfile: async () => {
-      const response = await fetch(`${API_URL}/users/profile`, {
+      const response = await fetch(`${API_URL}/profile/profile`, {
         method: "GET",
         headers: createHeaders(),
       })
@@ -96,7 +96,7 @@ const api = {
     },
 
     updateProfile: async (profileData) => {
-      const response = await fetch(`${API_URL}/users/profile`, {
+      const response = await fetch(`${API_URL}/profile/profile`, {
         method: "PUT",
         headers: createHeaders(),
         body: JSON.stringify(profileData),

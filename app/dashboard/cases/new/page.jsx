@@ -141,11 +141,11 @@ export default function NewCasePage() {
     courtComplex: "",
     filingDate: new Date(),
     hearingDate: null,
-    petitionerRole: "petitioner", // New field for role selection
+    petitionerRole: "petitioner",
     petitionerType: "individual",
-    petitionerNames: [], // Changed from petitioner to array for names
-    opposingRole: "defendant", // New field for role selection
-    opposingPartyNames: [], // Changed from opposingParty to array for names
+    petitionerNames: [],
+    opposingRole: "defendant",
+    opposingPartyNames: [],
     opposingCounsel: "",
     description: "",
     status: "active",
@@ -155,6 +155,8 @@ export default function NewCasePage() {
     actSections: "",
     reliefSought: "",
     notes: "",
+    advocates: [], // Only allowed advocate fields will be added
+    parties: undefined // will be set on submit
   })
 
   const handleChange = (e) => {
@@ -269,12 +271,65 @@ export default function NewCasePage() {
       })
       setIsSubmitting(false)
       return
-    }
+    toast({
+      title: "Missing required fields",
+      description: "Please fill in all required fields: Case Title, Case Number, Case Type, and Status.",
+      variant: "destructive",
+    })
+    setIsSubmitting(false)
+    return
+  }
 
-    try {
+  // Validate advocates if present
+  if (caseData.advocates && caseData.advocates.length > 0) {
+    for (const [idx, advocate] of caseData.advocates.entries()) {
+      if (!advocate.name) {
+        toast({
+          title: `Missing advocate name`,
+          description: `Please fill the name for advocate #${idx + 1}.`,
+          variant: "destructive",
+        })
+        setIsSubmitting(false)
+        return
+      }
+    }
+  }
+
+  try {
       // Format data for API
+      const parties = {
+        petitioner: (caseData.petitionerNames || []).map(name => ({
+          role: caseData.petitionerRole || "Petitioner",
+          type: caseData.petitionerType || "Individual",
+          name: name
+        })),
+        respondent: (caseData.opposingPartyNames || []).map(name => ({
+          role: caseData.opposingRole || "Defendant",
+          type: "Individual",
+          name: name
+        }))
+      };
+      // Only send this parties object, not legacy fields
+      // Remove non-schema fields from advocates before sending
+      // IMPORTANT: Joi validator (validation.js) only allows:
+      // name (required), email (required), contact (required), company (optional), gst (optional), isLead (optional)
+      // DO NOT send spock, poc, or level, even if required by backend Mongoose schema, or validation will fail.
+      // If you want to require those fields, add them to the Joi validator too!
+      const advocatesClean = (caseData.advocates || []).map(({name, email, contact, company, gst, spock, poc, level, isLead}) => ({
+  name,
+  email,
+  contact,
+  company: company || '',
+  gst: gst || '',
+  spock: spock || '',
+  poc: poc || '',
+  level: level || '',
+  isLead: !!isLead
+})); // includes all required fields
       const apiCaseData = {
         ...caseData,
+        parties,
+        advocates: advocatesClean,
         hearingDate: caseData.hearingDate ? caseData.hearingDate.toISOString() : null,
         filingDate: caseData.filingDate ? caseData.filingDate.toISOString() : new Date().toISOString(),
       }
@@ -293,78 +348,41 @@ export default function NewCasePage() {
         }
       }
 
-      // If the case has a hearing date, create a calendar event
-      if (caseData.hearingDate) {
-        try {
-          const eventData = {
-            title: `Hearing - ${caseData.title}`,
-            case: newCase.id || newCase._id,
-            start: caseData.hearingDate.toISOString(),
-            end: new Date(caseData.hearingDate.getTime() + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
-            type: "hearing",
-            location: `${caseData.court}, Court Hall ${caseData.courtHall}`,
-            description: `Hearing for case ${caseData.caseNumber || caseData.title}`,
-          }
-
-          await api.events.create(eventData)
-        } catch (eventError) {
-          console.error("Error creating hearing event:", eventError)
-        }
-      }
-
-      // After successful case creation:
-      try {
-        // Your existing code to create the case
-        const newCase = await api.cases.create(caseData)
-
-        // Show success message
-        toast({
-          title: "Success",
-          description: "Case created successfully",
-          status: "success",
-        })
-
-        // Force a refresh when navigating back to the cases page
-        router.push("/dashboard/cases?refresh=" + Date.now())
-      } catch (error) {
-        // Your existing error handling
-      }
-
+      // Show success message
       toast({
         title: "Case created successfully",
         description: "Your new case has been created and saved.",
-      })
-
-      router.push("/dashboard/cases")
+      });
+      router.push("/dashboard/cases?refresh=" + Date.now());
     } catch (error) {
-      console.error("Error saving case:", error)
+      console.error("Error saving case:", error);
 
       toast({
         title: "Error creating case",
         description: "There was an error saving the case. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
-  const districtOptions = DISTRICTS[caseData.courtState] || []
+  const districtOptions = DISTRICTS[caseData.courtState] || [];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">New Case</h1>
       </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="details">Case Details</TabsTrigger>
               <TabsTrigger value="court">Court Information</TabsTrigger>
               <TabsTrigger value="party">Party Section</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="advocates">Advocates</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details">
@@ -375,6 +393,7 @@ export default function NewCasePage() {
                 </CardHeader>
                 <CardContent>
                   <form id="case-form" onSubmit={handleSubmit} className="space-y-4">
+                    {/* ... (rest of the JSX) */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="title">
@@ -711,119 +730,132 @@ export default function NewCasePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {/* Petitioner/Appellant/Plaintiff/Complainant Details */}
+                    {/* Unified Party Type Dropdown for Petitioners */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Petitioner/Appellant/Plaintiff/Complainant Details</h3>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="petitionerRole">Role</Label>
-                          <Select
-                            value={caseData.petitionerRole}
-                            onValueChange={(value) => handleSelectChange("petitionerRole", value)}
-                          >
-                            <SelectTrigger id="petitionerRole">
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="petitioner">Petitioner</SelectItem>
-                              <SelectItem value="appellant">Appellant</SelectItem>
-                              <SelectItem value="plaintiff">Plaintiff</SelectItem>
-                              <SelectItem value="complainant">Complainant</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="petitionerType">Party Type</Label>
-                          <Select
-                            value={caseData.petitionerType}
-                            onValueChange={(value) => handleSelectChange("petitionerType", value)}
-                          >
-                            <SelectTrigger id="petitionerType">
-                              <SelectValue placeholder="Select party type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="individual">Individual</SelectItem>
-                              <SelectItem value="business">Business</SelectItem>
-                              <SelectItem value="government">Government</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Input id="newPetitionerName" placeholder="Enter party name" />
-                          <Button onClick={() => handlePartyAdd("petitioner")}>Add Party</Button>
-                        </div>
-
-                        {caseData.petitionerNames.map((name, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <span>{name}</span>
-                            <Button variant="ghost" size="sm" onClick={() => handlePartyRemove("petitioner", index)}>
-                              Remove
-                            </Button>
-                          </div>
-                        ))}
+                      <div className="flex items-center space-x-4">
+                        <Select
+                          value={caseData.petitionerRole || 'Petitioner'}
+                          onValueChange={val => setCaseData(prev => ({ ...prev, petitionerRole: val }))}
+                        >
+                          <SelectTrigger className="w-56">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Petitioner">Petitioner</SelectItem>
+                            <SelectItem value="Appellant">Appellant</SelectItem>
+                            <SelectItem value="Plaintiff">Plaintiff</SelectItem>
+                            <SelectItem value="Complainant">Complainant</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" onClick={() => setCaseData(prev => ({
+                          ...prev,
+                          petitioners: [...(prev.petitioners || []), { role: prev.petitionerRole || 'Petitioner', type: '', name: '' }]
+                        }))}>
+                          Add Party
+                        </Button>
                       </div>
+                      {caseData.petitioners && caseData.petitioners.length > 0 && (
+                        <div className="space-y-2">
+                          {caseData.petitioners.map((petitioner, idx) => (
+                            <div key={idx} className="flex space-x-2 mb-2">
+                              {/* Remove role dropdown, use selected role */}
+                              <Input
+                                value={petitioner.name}
+                                onChange={e => {
+                                  const arr = [...caseData.petitioners]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                }}
+                                placeholder={`Enter ${petitioner.role || caseData.petitionerRole || 'Petitioner'} name`}
+                              />
+                              <Select
+                                value={petitioner.type}
+                                onValueChange={val => {
+                                  const arr = [...caseData.petitioners]; arr[idx].type = val; setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Individual">Individual</SelectItem>
+                                  <SelectItem value="Corporation">Corporation</SelectItem>
+                                  <SelectItem value="Organization">Organization</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button variant="ghost" onClick={() => setCaseData(prev => ({ ...prev, petitioners: prev.petitioners.filter((_, i) => i !== idx) }))}>Remove</Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-
-                    {/* Defendant/Respondent/Accused/Opponent Details */}
+                    {/* Unified Party Type Dropdown for Respondents */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-medium">Defendant/Respondent/Accused/Opponent Details</h3>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label
-
-                          htmlFor="opposingRole">Role</Label>
-                          <Select
-                            value={caseData.opposingRole}
-                            onValueChange={(value) => handleSelectChange("opposingRole", value)}
-                          >
-                            <SelectTrigger id="opposingRole">
-                              <SelectValue placeholder="Select role" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="defendant">Defendant</SelectItem>
-                              <SelectItem value="respondent">Respondent</SelectItem>
-                              <SelectItem value="accused">Accused</SelectItem>
-                              <SelectItem value="opponent">Opponent</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="opposingCounsel">Opposing Counsel</Label>
-                          <Input
-                            id="opposingCounsel"
-                            name="opposingCounsel"
-                            value={caseData.opposingCounsel}
-                            onChange={handleChange}
-                          />
-                        </div>
-
-                        <div className="flex space-x-2">
-                          <Input id="newOpposingPartyName" placeholder="Enter party name" />
-                          <Button onClick={() => handlePartyAdd("opposingParty")}>Add Party</Button>
-                        </div>
-
-                        {caseData.opposingPartyNames.map((name, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <span>{name}</span>
-                            <Button variant="ghost" size="sm" onClick={() => handlePartyRemove("opposingParty", index)}>
-                              Remove
-                            </Button>
-                          </div>
-                        ))}
+                      <div className="flex items-center space-x-4">
+                        <Select
+                          value={caseData.respondentRole || 'Respondent'}
+                          onValueChange={val => setCaseData(prev => ({ ...prev, respondentRole: val }))}
+                        >
+                          <SelectTrigger className="w-56">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Respondent">Respondent</SelectItem>
+                            <SelectItem value="Accused">Accused</SelectItem>
+                            <SelectItem value="Defendant">Defendant</SelectItem>
+                            <SelectItem value="Opponent">Opponent</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button type="button" onClick={() => setCaseData(prev => ({
+                          ...prev,
+                          respondents: [...(prev.respondents || []), { role: prev.respondentRole || 'Respondent', type: '', name: '', opposingCounsel: '' }]
+                        }))}>
+                          Add Party
+                        </Button>
                       </div>
+                      {caseData.respondents && caseData.respondents.length > 0 && (
+                        <div className="space-y-2">
+                          {caseData.respondents.map((respondent, idx) => (
+                            <div key={idx} className="flex space-x-2 mb-2">
+                              {/* Remove role dropdown, use selected role */}
+                              <Input
+                                value={respondent.name}
+                                onChange={e => {
+                                  const arr = [...caseData.respondents]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, respondents: arr }));
+                                }}
+                                placeholder={`Enter ${respondent.role || caseData.respondentRole || 'Respondent'} name`}
+                              />
+                              <Select
+                                value={respondent.type}
+                                onValueChange={val => {
+                                  const arr = [...caseData.respondents]; arr[idx].type = val; setCaseData(prev => ({ ...prev, respondents: arr }));
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Individual">Individual</SelectItem>
+                                  <SelectItem value="Corporation">Corporation</SelectItem>
+                                  <SelectItem value="Organization">Organization</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Input
+                                value={respondent.opposingCounsel}
+                                onChange={e => {
+                                  const arr = [...caseData.respondents]; arr[idx].opposingCounsel = e.target.value; setCaseData(prev => ({ ...prev, respondents: arr }));
+                                }}
+                                placeholder="Opposing Counsel"
+                              />
+                              <Button variant="ghost" onClick={() => setCaseData(prev => ({ ...prev, respondents: prev.respondents.filter((_, i) => i !== idx) }))}>Remove</Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                  <Button variant="outline" onClick={() => router.push("/dashboard/cases")}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" form="case-form" disabled={isSubmitting}>
-                    {isSubmitting ? "Saving..." : "Save Case"}
-                  </Button>
+                  <Button variant="outline" onClick={() => router.push("/dashboard/cases")}>Cancel</Button>
+                  <Button type="submit" form="case-form" disabled={isSubmitting}>{isSubmitting ? "Saving..." : "Save Case"}</Button>
                 </CardFooter>
               </Card>
             </TabsContent>
@@ -932,6 +964,115 @@ export default function NewCasePage() {
                 </CardFooter>
               </Card>
             </TabsContent>
+             <TabsContent value="advocates">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Advocates Section</CardTitle>
+                  <CardDescription>Add lead and associate advocates for this case (optional)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    {(!caseData.advocates || caseData.advocates.length === 0) && (
+                      <Button type="button" onClick={() => setCaseData(prev => ({ ...prev, advocates: [{ name: '', email: '', contact: '', company: '', gst: '', isLead: false }]}))}>
+                        Add Advocate
+                      </Button>
+                    )}
+                    {caseData.advocates && caseData.advocates.map((advocate, idx) => (
+  <div key={idx} className="space-y-2 border p-3 rounded-md mb-2">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <Input
+        value={advocate.name}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Advocate Name"
+        required
+      />
+      <Input
+        type="email"
+        value={advocate.email}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].email = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Email"
+      />
+      <Input
+        value={advocate.contact}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].contact = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Contact"
+      />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <Input
+        value={advocate.company}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].company = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Company"
+      />
+      <Input
+        value={advocate.gst}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].gst = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="GST"
+      />
+      <Input
+        value={advocate.spock}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].spock = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Spock Number"
+      />
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <Input
+        value={advocate.poc}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].poc = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        placeholder="Point of Contact"
+      />
+      <select
+        value={advocate.level || ''}
+        onChange={e => {
+          const arr = [...caseData.advocates]; arr[idx].level = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
+        }}
+        className="border rounded px-2 py-1"
+      >
+        <option value="">Select Level</option>
+        <option value="Senior">Senior</option>
+        <option value="Junior">Junior</option>
+      </select>
+      <div className="flex items-center space-x-2">
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={!!advocate.isLead}
+            onChange={e => {
+              const arr = [...caseData.advocates]; arr[idx].isLead = e.target.checked; setCaseData(prev => ({ ...prev, advocates: arr }));
+            }}
+            className="mr-2"
+          />
+          Lead Advocate
+        </label>
+        <Button variant="ghost" size="sm" onClick={() => setCaseData(prev => ({ ...prev, advocates: prev.advocates.filter((_, i) => i !== idx) }))}>Remove</Button>
+      </div>
+    </div>
+  </div>
+))}
+                    {/* Save Case button for Advocates section */}
+                    <div className="flex justify-end">
+                      <Button type="submit" form="case-form" disabled={isSubmitting}>
+                        {isSubmitting ? "Saving..." : "Save Case"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
           </Tabs>
         </div>
 
@@ -973,5 +1114,5 @@ export default function NewCasePage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

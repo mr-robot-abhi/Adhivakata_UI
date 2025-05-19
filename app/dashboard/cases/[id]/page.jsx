@@ -277,95 +277,78 @@ export default function CaseDetailsPage() {
             <TabsContent value="parties">
               <Card>
                 <CardHeader>
-                  <CardTitle>Parties Information</CardTitle>
-                  <CardDescription>Details about the parties involved in the case</CardDescription>
+                  <CardTitle>Parties & Advocates</CardTitle>
+                  <CardDescription>All details about the parties and advocates for this case</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-8">
+                  {/* Parties Section */}
                   <div>
-                    <h3 className="text-lg font-medium">
-                      {caseData.petitionerRole?.charAt(0).toUpperCase() + caseData.petitionerRole?.slice(1) ||
-                        "Petitioner"}
-                    </h3>
-                    <div className="mt-2 space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground">Type</h4>
-                          <p className="text-base capitalize">{caseData.petitionerType || "Individual"}</p>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Names</h4>
-                        {caseData.petitionerNames && caseData.petitionerNames.length > 0 ? (
-                          <ul className="mt-2 space-y-1">
-                            {caseData.petitionerNames.map((name, index) => (
-                              <li key={index} className="flex items-center">
-                                <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                                {name}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-base">No names provided</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div>
-                    <h3 className="text-lg font-medium">
-                      {caseData.opposingRole?.charAt(0).toUpperCase() + caseData.opposingRole?.slice(1) || "Defendant"}
-                    </h3>
-                    <div className="mt-2 space-y-4">
-                      {caseData.opposingCounsel && (
-                        <div>
-                          <h4 className="text-sm font-medium text-muted-foreground">Opposing Counsel</h4>
-                          <p className="text-base">{caseData.opposingCounsel}</p>
-                        </div>
-                      )}
-
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Names</h4>
-                        {caseData.opposingPartyNames && caseData.opposingPartyNames.length > 0 ? (
-                          <ul className="mt-2 space-y-1">
-                            {caseData.opposingPartyNames.map((name, index) => (
-                              <li key={index} className="flex items-center">
-                                <User className="mr-2 h-4 w-4 text-muted-foreground" />
-                                {name}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-base">No names provided</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {isLawyer && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h3 className="text-lg font-medium">Client Information</h3>
-                        <div className="mt-2">
-                          <div className="flex items-center">
-                            <Users className="mr-2 h-4 w-4 text-muted-foreground" />
-                            {caseData.client ? (
-                              <span>
-                                {typeof caseData.client === "object"
-                                  ? caseData.client.name || "Unknown Client"
-                                  : caseData.client}
-                              </span>
+                    <h3 className="text-lg font-semibold mb-2">Parties</h3>
+                    {(caseData.parties || (caseData.case && caseData.case.parties)) ? (() => {
+                      const partiesObj = caseData.parties || (caseData.case && caseData.case.parties) || {};
+                      const petitioners = Array.isArray(partiesObj.petitioner) ? partiesObj.petitioner : [];
+                      const respondents = Array.isArray(partiesObj.respondent) ? partiesObj.respondent : [];
+                      return (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div>
+                            <h4 className="text-base font-medium mb-1">Petitioners</h4>
+                            {petitioners.length > 0 ? (
+                              <ul className="space-y-2">
+                                {petitioners.map((pet, idx) => (
+                                  <li key={idx} className="border rounded p-2">
+                                    <span className="font-medium">{pet.name}</span>
+                                    {pet.role && <span className="ml-2 text-xs text-muted-foreground">({pet.role})</span>}
+                                    {pet.type && <span className="ml-2 text-xs text-muted-foreground">[{pet.type}]</span>}
+                                  </li>
+                                ))}
+                              </ul>
                             ) : (
-                              <span>No client assigned</span>
+                              <p className="text-muted-foreground">No petitioners listed</p>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-base font-medium mb-1">Respondents</h4>
+                            {respondents.length > 0 ? (
+                              <ul className="space-y-2">
+                                {respondents.map((res, idx) => (
+                                  <li key={idx} className="border rounded p-2">
+                                    <span className="font-medium">{res.name}</span>
+                                    {res.role && <span className="ml-2 text-xs text-muted-foreground">({res.role})</span>}
+                                    {res.type && <span className="ml-2 text-xs text-muted-foreground">[{res.type}]</span>}
+                                    {res.opposingCounsel && <span className="ml-2 text-xs text-muted-foreground">Counsel: {res.opposingCounsel}</span>}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-muted-foreground">No respondents listed</p>
                             )}
                           </div>
                         </div>
-                      </div>
-                    </>
-                  )}
+                      );
+                    })() : (
+                      <div className="text-muted-foreground">No party data available</div>
+                    )}
+                  </div>
+                  {/* Advocates Section */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Advocates</h3>
+                    {Array.isArray(caseData.advocates) && caseData.advocates.length > 0 ? (
+                      <ul className="space-y-2">
+                        {caseData.advocates.map((adv, idx) => (
+                          <li key={idx} className="border rounded p-2">
+                            <span className="font-medium">{adv.name}</span>
+                            {adv.email && <span className="ml-2 text-xs text-muted-foreground">Email: {adv.email}</span>}
+                            {adv.contact && <span className="ml-2 text-xs text-muted-foreground">Contact: {adv.contact}</span>}
+                            {adv.company && <span className="ml-2 text-xs text-muted-foreground">Company: {adv.company}</span>}
+                            {adv.gst && <span className="ml-2 text-xs text-muted-foreground">GST: {adv.gst}</span>}
+                            {adv.isLead && <span className="ml-2 text-xs text-green-700">(Lead)</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-muted-foreground">No advocates listed</p>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -417,68 +400,41 @@ export default function CaseDetailsPage() {
             <TabsContent value="hearings">
               <Card>
                 <CardHeader>
-                  <CardTitle>Hearings & Events</CardTitle>
-                  <CardDescription>Schedule and history of hearings for this case</CardDescription>
+                  <CardTitle>Hearings</CardTitle>
+                  <CardDescription>Next hearing and hearing history for this case</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {events && events.length > 0 ? (
+                  {caseData.nextHearingDate || caseData.hearingDate ? (
                     <div className="space-y-4">
-                      {events.map((event, index) => (
-                        <div key={index} className="flex items-start p-3 border rounded-md">
-                          <div className="mr-3 mt-1">
-                            {new Date(event.start) > new Date() ? (
-                              <Clock className="h-5 w-5 text-blue-500" />
-                            ) : (
-                              <CheckCircle className="h-5 w-5 text-green-500" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium">{event.title}</p>
-                              <Badge
-                                className={
-                                  new Date(event.start) > new Date()
-                                    ? "bg-blue-100 text-blue-800"
-                                    : "bg-green-100 text-green-800"
-                                }
-                              >
-                                {new Date(event.start) > new Date() ? "Upcoming" : "Completed"}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {formatDate(event.start)}{" "}
-                              {event.start &&
-                                new Date(event.start).toLocaleTimeString("en-US", {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                })}
-                            </p>
-                            {event.location && (
-                              <p className="text-sm flex items-center mt-1">
-                                <MapPin className="mr-1 h-3 w-3 text-muted-foreground" />
-                                {event.location}
-                              </p>
-                            )}
-                            {event.description && <p className="text-sm mt-2">{event.description}</p>}
-                          </div>
+                      <div className="flex items-start p-3 border rounded-md">
+                        <div className="mr-3 mt-1">
+                          <Clock className="h-5 w-5 text-blue-500" />
                         </div>
-                      ))}
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium">Next Hearing</p>
+                            <Badge className="bg-blue-100 text-blue-800">Upcoming</Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {formatDate(caseData.nextHearingDate || caseData.hearingDate)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <Calendar className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
                       <h3 className="mt-4 text-lg font-medium">No hearings scheduled</h3>
                       <p className="text-sm text-muted-foreground">
-                        There are no hearings or events scheduled for this case yet.
+                        There is no next hearing set for this case yet.
                       </p>
                     </div>
                   )}
                 </CardContent>
                 {isLawyer && (
                   <CardFooter>
-                    <Button className="w-full" onClick={() => router.push(`/dashboard/calendar/new?caseId=${id}`)}>
-                      Schedule New Hearing
+                    <Button className="w-full" onClick={() => router.push(`/dashboard/cases/${id}/edit`)}>
+                      Set Next Hearing
                     </Button>
                   </CardFooter>
                 )}
