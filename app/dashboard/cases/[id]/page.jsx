@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -277,76 +277,109 @@ export default function CaseDetailsPage() {
             <TabsContent value="parties">
               <Card>
                 <CardHeader>
-                  <CardTitle>Parties & Advocates</CardTitle>
-                  <CardDescription>All details about the parties and advocates for this case</CardDescription>
+                  <CardTitle>Parties</CardTitle>
+                  <CardDescription>Case parties and their representatives</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-8">
-                  {/* Parties Section */}
+                  {/* Petitioners/Plaintiffs/Appellants/Complainants Section */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Parties</h3>
-                    {(caseData.parties || (caseData.case && caseData.case.parties)) ? (() => {
-                      const partiesObj = caseData.parties || (caseData.case && caseData.case.parties) || {};
-                      const petitioners = Array.isArray(partiesObj.petitioner) ? partiesObj.petitioner : [];
-                      const respondents = Array.isArray(partiesObj.respondent) ? partiesObj.respondent : [];
-                      return (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <h4 className="text-base font-medium mb-1">Petitioners</h4>
-                            {petitioners.length > 0 ? (
-                              <ul className="space-y-2">
-                                {petitioners.map((pet, idx) => (
-                                  <li key={idx} className="border rounded p-2">
-                                    <span className="font-medium">{pet.name}</span>
-                                    {pet.role && <span className="ml-2 text-xs text-muted-foreground">({pet.role})</span>}
-                                    {pet.type && <span className="ml-2 text-xs text-muted-foreground">[{pet.type}]</span>}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-muted-foreground">No petitioners listed</p>
-                            )}
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Petitioners/Plaintiffs/Appellants/Complainants</h3>
+                    </div>
+                    {caseData.parties?.petitioner?.length > 0 ? (
+                      <div className="space-y-4">
+                        {caseData.parties.petitioner.map((party, idx) => (
+                          <div key={`petitioner-${idx}`} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{party.name}</p>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  <span className="capitalize">{party.role}</span>
+                                  {party.type && <span className="ml-2">• {party.type}</span>}
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-base font-medium mb-1">Respondents</h4>
-                            {respondents.length > 0 ? (
-                              <ul className="space-y-2">
-                                {respondents.map((res, idx) => (
-                                  <li key={idx} className="border rounded p-2">
-                                    <span className="font-medium">{res.name}</span>
-                                    {res.role && <span className="ml-2 text-xs text-muted-foreground">({res.role})</span>}
-                                    {res.type && <span className="ml-2 text-xs text-muted-foreground">[{res.type}]</span>}
-                                    {res.opposingCounsel && <span className="ml-2 text-xs text-muted-foreground">Counsel: {res.opposingCounsel}</span>}
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-muted-foreground">No respondents listed</p>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })() : (
-                      <div className="text-muted-foreground">No party data available</div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg">
+                        <Users className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">No petitioners/plaintiffs/appellants/complainants added</p>
+                      </div>
                     )}
                   </div>
+
+                  {/* Respondents/Defendants/Accused/Opponents Section */}
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Respondents/Defendants/Accused/Opponents</h3>
+                    </div>
+                    {caseData.parties?.respondent?.length > 0 ? (
+                      <div className="space-y-4">
+                        {caseData.parties.respondent.map((party, idx) => (
+                          <div key={`respondent-${idx}`} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{party.name}</p>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  <span className="capitalize">{party.role}</span>
+                                  {party.type && <span className="ml-2">• {party.type}</span>}
+                                  {party.opposingCounsel && (
+                                    <div className="mt-2 text-sm bg-muted/50 p-2 rounded">
+                                      <p className="font-medium">Opposing Counsel:</p>
+                                      <p>{party.opposingCounsel}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border rounded-lg">
+                        <Users className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">No respondents/defendants/accused/opponents added</p>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Advocates Section */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-2">Advocates</h3>
-                    {Array.isArray(caseData.advocates) && caseData.advocates.length > 0 ? (
-                      <ul className="space-y-2">
-                        {caseData.advocates.map((adv, idx) => (
-                          <li key={idx} className="border rounded p-2">
-                            <span className="font-medium">{adv.name}</span>
-                            {adv.email && <span className="ml-2 text-xs text-muted-foreground">Email: {adv.email}</span>}
-                            {adv.contact && <span className="ml-2 text-xs text-muted-foreground">Contact: {adv.contact}</span>}
-                            {adv.company && <span className="ml-2 text-xs text-muted-foreground">Company: {adv.company}</span>}
-                            {adv.gst && <span className="ml-2 text-xs text-muted-foreground">GST: {adv.gst}</span>}
-                            {adv.isLead && <span className="ml-2 text-xs text-green-700">(Lead)</span>}
-                          </li>
+                    <h3 className="text-lg font-semibold mb-4">Advocates</h3>
+                    {caseData.advocates?.length > 0 ? (
+                      <div className="space-y-4">
+                        {caseData.advocates.map((advocate, idx) => (
+                          <div key={`advocate-${idx}`} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex items-center">
+                                  <p className="font-medium">{advocate.name}</p>
+                                  {advocate.isLead && (
+                                    <Badge variant="secondary" className="ml-2">
+                                      Lead
+                                    </Badge>
+                                  )}
+                                </div>
+                                {advocate.email && <p className="text-sm text-muted-foreground">{advocate.email}</p>}
+                                {advocate.contact && <p className="text-sm text-muted-foreground">{advocate.contact}</p>}
+                                {advocate.company && <p className="text-sm text-muted-foreground">{advocate.company}</p>}
+                              </div>
+                              {advocate.level && (
+                                <Badge variant={advocate.level === "Senior" ? "default" : "outline"}>
+                                  {advocate.level}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
                         ))}
-                      </ul>
+                      </div>
                     ) : (
-                      <p className="text-muted-foreground">No advocates listed</p>
+                      <div className="text-center py-8 border rounded-lg">
+                        <User className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">No advocates have been added to this case</p>
+                      </div>
                     )}
                   </div>
                 </CardContent>

@@ -141,12 +141,11 @@ export default function NewCasePage() {
     courtComplex: "",
     filingDate: new Date(),
     hearingDate: null,
-    petitionerRole: "petitioner",
-    petitionerType: "individual",
-    petitionerNames: [],
-    opposingRole: "defendant",
-    opposingPartyNames: [],
-    opposingCounsel: "",
+    petitionerRole: "Petitioner",
+    petitionerType: "Individual",
+    petitioners: [],
+    respondentRole: "Defendant",
+    respondents: [],
     description: "",
     status: "active",
     priority: "normal",
@@ -155,8 +154,7 @@ export default function NewCasePage() {
     actSections: "",
     reliefSought: "",
     notes: "",
-    advocates: [], // Only allowed advocate fields will be added
-    parties: undefined // will be set on submit
+    advocates: []
   })
 
   const handleChange = (e) => {
@@ -195,20 +193,37 @@ export default function NewCasePage() {
 
   const handlePartyAdd = (side) => {
     const nameInput = document.getElementById(`new${side}Name`).value
-    if (nameInput && caseData[`${side}Names`].length < 3) {
+    const role = caseData[`${side}Role`] || (side === 'petitioner' ? 'Petitioner' : 'Defendant')
+    const type = side === 'petitioner' ? caseData.petitionerType : 'Individual'
+    
+    if (nameInput) {
+      const newParty = {
+        name: nameInput,
+        role: role,
+        type: type,
+        email: "",
+        contact: "",
+        address: ""
+      }
+      
       setCaseData((prev) => ({
         ...prev,
-        [`${side}Names`]: [...prev[`${side}Names`], nameInput],
+        [side === 'petitioner' ? 'petitioners' : 'respondents']: [
+          ...(prev[side === 'petitioner' ? 'petitioners' : 'respondents'] || []),
+          newParty
+        ]
       }))
+      
       document.getElementById(`new${side}Name`).value = "" // Clear the input
     }
   }
 
   const handlePartyRemove = (side, index) => {
-    setCaseData((prev) => {
-      const newNames = prev[`${side}Names`].filter((_, i) => i !== index)
-      return { ...prev, [`${side}Names`]: newNames }
-    })
+    const partyType = side === 'petitioner' ? 'petitioners' : 'respondents'
+    setCaseData((prev) => ({
+      ...prev,
+      [partyType]: prev[partyType].filter((_, i) => i !== index)
+    }))
   }
 
   const handleFileChange = (e) => {
@@ -254,120 +269,172 @@ export default function NewCasePage() {
       console.error(`Error uploading documents:`, error)
     }
 
-    return uploadedDocs
-  }
+    return uploadedDocs;
+  };
 
-  // Update the handleSubmit function to allow clients to create cases
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-
-    // Validate required fields
-    if (!caseData.title || !caseData.caseNumber || !caseData.caseType || !caseData.status) {
-      toast({
-        title: "Missing required fields",
-        description: "Please fill in all required fields: Case Title, Case Number, Case Type, and Status.",
-        variant: "destructive",
-      })
-      setIsSubmitting(false)
-      return
-    toast({
-      title: "Missing required fields",
-      description: "Please fill in all required fields: Case Title, Case Number, Case Type, and Status.",
-      variant: "destructive",
-    })
-    setIsSubmitting(false)
-    return
-  }
-
-  // Validate advocates if present
-  if (caseData.advocates && caseData.advocates.length > 0) {
-    for (const [idx, advocate] of caseData.advocates.entries()) {
-      if (!advocate.name) {
+  const handleSubmit = async (e, section = 'all') => {
+    e.preventDefault();
+    
+    // Validate required fields for the details section
+    if (section === 'all' || section === 'details') {
+      if (!caseData.title || !caseData.caseNumber || !caseData.caseType || !caseData.status) {
         toast({
-          title: `Missing advocate name`,
-          description: `Please fill the name for advocate #${idx + 1}.`,
+          title: "Error",
+          description: "Please fill in all required fields (Case Name, Case Number, Case Type, Status)",
           variant: "destructive",
-        })
-        setIsSubmitting(false)
-        return
+        });
+        return;
       }
     }
-  }
 
-  try {
-      // Format data for API
-      const parties = {
-        petitioner: (caseData.petitionerNames || []).map(name => ({
-          role: caseData.petitionerRole || "Petitioner",
-          type: caseData.petitionerType || "Individual",
-          name: name
-        })),
-        respondent: (caseData.opposingPartyNames || []).map(name => ({
-          role: caseData.opposingRole || "Defendant",
-          type: "Individual",
-          name: name
-        }))
-      };
-      // Only send this parties object, not legacy fields
-      // Remove non-schema fields from advocates before sending
-      // IMPORTANT: Joi validator (validation.js) only allows:
-      // name (required), email (required), contact (required), company (optional), gst (optional), isLead (optional)
-      // DO NOT send spock, poc, or level, even if required by backend Mongoose schema, or validation will fail.
-      // If you want to require those fields, add them to the Joi validator too!
-      const advocatesClean = (caseData.advocates || []).map(({name, email, contact, company, gst, spock, poc, level, isLead}) => ({
-  name,
-  email,
-  contact,
-  company: company || '',
-  gst: gst || '',
-  spock: spock || '',
-  poc: poc || '',
-  level: level || '',
-  isLead: !!isLead
-})); // includes all required fields
-      const apiCaseData = {
-        ...caseData,
-        parties,
-        advocates: advocatesClean,
-        hearingDate: caseData.hearingDate ? caseData.hearingDate.toISOString() : null,
-        filingDate: caseData.filingDate ? caseData.filingDate.toISOString() : new Date().toISOString(),
+    // Validate party section
+    if (section === 'all' || section === 'party') {
+      if (!caseData.petitioners || caseData.petitioners.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please add at least one petitioner/plaintiff/appellant/complainant",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // API call to create a new case
-      const newCase = await api.cases.create(apiCaseData)
-      console.log("Case created:", newCase)
-
-      // Upload documents if any are selected
-      if (selectedFiles.length > 0) {
-        try {
-          await uploadDocuments(newCase.id || newCase._id)
-          console.log('Documents uploaded successfully')
-        } catch (uploadError) {
-          console.error('Error uploading documents:', uploadError)
+      // Validate petitioner data
+      for (let i = 0; i < caseData.petitioners.length; i++) {
+        const petitioner = caseData.petitioners[i];
+        if (!petitioner.name) {
+          toast({
+            title: "Error",
+            description: `Please enter a name for Petitioner/Plaintiff/Appellant/Complainant ${i + 1}`,
+            variant: "destructive",
+          });
+          return;
         }
       }
 
-      // Show success message
-      toast({
-        title: "Case created successfully",
-        description: "Your new case has been created and saved.",
-      });
-      router.push("/dashboard/cases?refresh=" + Date.now());
+      // Validate respondent data if any
+      if (caseData.respondents && caseData.respondents.length > 0) {
+        for (let i = 0; i < caseData.respondents.length; i++) {
+          const respondent = caseData.respondents[i];
+          if (!respondent.name) {
+            toast({
+              title: "Error",
+              description: `Please enter a name for Respondent/Defendant/Accused/Opponent ${i + 1}`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    try {
+      setIsSubmitting(true);
+      
+      // Format the data according to the API schema
+      const formattedData = {
+        // Basic case info
+        title: caseData.title,
+        caseNumber: caseData.caseNumber,
+        caseType: caseData.caseType,
+        status: caseData.status || "active",
+        
+        // Court information
+        courtState: caseData.courtState,
+        district: caseData.district,
+        bench: caseData.bench,
+        courtType: caseData.courtType,
+        court: caseData.court,
+        courtHall: caseData.courtHall,
+        courtComplex: caseData.courtComplex,
+        
+        // Dates
+        filingDate: caseData.filingDate ? new Date(caseData.filingDate).toISOString() : null,
+        hearingDate: caseData.hearingDate ? new Date(caseData.hearingDate).toISOString() : null,
+        
+        // Additional details
+        description: caseData.description || "",
+        priority: caseData.priority || "normal",
+        isUrgent: caseData.isUrgent || false,
+        caseStage: caseData.caseStage || "filing",
+        actSections: caseData.actSections || "",
+        reliefSought: caseData.reliefSought || "",
+        notes: caseData.notes || "",
+        
+        // Format parties data
+        parties: {
+          petitioner: (caseData.petitioners || []).map(petitioner => ({
+            name: petitioner.name,
+            role: petitioner.role || 'Petitioner',
+            type: petitioner.type || 'Individual',
+            email: petitioner.email || "",
+            contact: petitioner.contact || "",
+            address: petitioner.address || ""
+          })),
+          respondent: (caseData.respondents || []).map(respondent => ({
+            name: respondent.name,
+            role: respondent.role || 'Respondent',
+            type: respondent.type || 'Individual',
+            email: respondent.email || "",
+            contact: respondent.contact || "",
+            address: respondent.address || "",
+            opposingCounsel: respondent.opposingCounsel || ""
+          }))
+        },
+        
+        // Advocates
+        advocates: caseData.advocates || []
+      };
+
+      let response;
+      
+      if (caseData._id) {
+        // Update existing case
+        response = await api.cases.update(caseData._id, formattedData);
+      } else {
+        // Create new case
+        response = await api.cases.create(formattedData);
+      }
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // If this is a partial save, update the local state with the saved data
+      if (section !== 'all') {
+        setCaseData(prev => ({
+          ...prev,
+          ...(response.data || response),
+          _id: response.data?._id || response._id || prev._id
+        }));
+        
+        toast({
+          title: "Success",
+          description: `Case ${section} saved successfully`,
+        });
+      } else {
+        // If this is a final submission, redirect to the case details page
+        toast({
+          title: "Success",
+          description: "Case created successfully",
+        });
+        
+        // Redirect to the newly created case
+        router.push(`/dashboard/cases/${response.data?._id || response._id}`);
+      }
+      
+      return response;
     } catch (error) {
       console.error("Error saving case:", error);
-
       toast({
-        title: "Error creating case",
-        description: "There was an error saving the case. Please try again.",
+        title: "Error",
+        description: error.message || "Failed to save case. Please try again.",
         variant: "destructive",
       });
+      throw error;
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const districtOptions = DISTRICTS[caseData.courtState] || [];
+  }
 
   return (
     <div className="space-y-6">
@@ -747,41 +814,134 @@ export default function NewCasePage() {
                             <SelectItem value="Complainant">Complainant</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button type="button" onClick={() => setCaseData(prev => ({
-                          ...prev,
-                          petitioners: [...(prev.petitioners || []), { role: prev.petitionerRole || 'Petitioner', type: '', name: '' }]
-                        }))}>
-                          Add Party
+                        <Select
+                          value={caseData.petitionerType || 'Individual'}
+                          onValueChange={val => setCaseData(prev => ({ ...prev, petitionerType: val }))}
+                        >
+                          <SelectTrigger className="w-56">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Individual">Individual</SelectItem>
+                            <SelectItem value="Corporation">Corporation</SelectItem>
+                            <SelectItem value="Organization">Organization</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          type="button" 
+                          onClick={() => setCaseData(prev => ({
+                            ...prev,
+                            petitioners: [
+                              ...(prev.petitioners || []), 
+                              { 
+                                role: prev.petitionerRole || 'Petitioner', 
+                                type: prev.petitionerType || 'Individual', 
+                                name: '',
+                                email: '',
+                                contact: '',
+                                address: ''
+                              }
+                            ]
+                          }))}
+                        >
+                          Add Petitioner
                         </Button>
                       </div>
                       {caseData.petitioners && caseData.petitioners.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {caseData.petitioners.map((petitioner, idx) => (
-                            <div key={idx} className="flex space-x-2 mb-2">
-                              {/* Remove role dropdown, use selected role */}
-                              <Input
-                                value={petitioner.name}
-                                onChange={e => {
-                                  const arr = [...caseData.petitioners]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, petitioners: arr }));
-                                }}
-                                placeholder={`Enter ${petitioner.role || caseData.petitionerRole || 'Petitioner'} name`}
-                              />
-                              <Select
-                                value={petitioner.type}
-                                onValueChange={val => {
-                                  const arr = [...caseData.petitioners]; arr[idx].type = val; setCaseData(prev => ({ ...prev, petitioners: arr }));
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Individual">Individual</SelectItem>
-                                  <SelectItem value="Corporation">Corporation</SelectItem>
-                                  <SelectItem value="Organization">Organization</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button variant="ghost" onClick={() => setCaseData(prev => ({ ...prev, petitioners: prev.petitioners.filter((_, i) => i !== idx) }))}>Remove</Button>
+                            <div key={idx} className="border rounded-lg p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium">{petitioner.role || 'Petitioner'} {idx + 1}</h4>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setCaseData(prev => ({ 
+                                    ...prev, 
+                                    petitioners: prev.petitioners.filter((_, i) => i !== idx) 
+                                  }))}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Name</Label>
+                                  <Input
+                                    value={petitioner.name}
+                                    onChange={e => {
+                                      const arr = [...caseData.petitioners]; 
+                                      arr[idx].name = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                    }}
+                                    placeholder="Full name"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Type</Label>
+                                  <Select
+                                    value={petitioner.type}
+                                    onValueChange={val => {
+                                      const arr = [...caseData.petitioners]; 
+                                      arr[idx].type = val; 
+                                      setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Individual">Individual</SelectItem>
+                                      <SelectItem value="Corporation">Corporation</SelectItem>
+                                      <SelectItem value="Organization">Organization</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Email</Label>
+                                  <Input
+                                    type="email"
+                                    value={petitioner.email}
+                                    onChange={e => {
+                                      const arr = [...caseData.petitioners]; 
+                                      arr[idx].email = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                    }}
+                                    placeholder="email@example.com"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Contact Number</Label>
+                                  <Input
+                                    type="tel"
+                                    value={petitioner.contact}
+                                    onChange={e => {
+                                      const arr = [...caseData.petitioners]; 
+                                      arr[idx].contact = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                    }}
+                                    placeholder="+91 XXXXXXXXXX"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label>Address</Label>
+                                  <Textarea
+                                    value={petitioner.address}
+                                    onChange={e => {
+                                      const arr = [...caseData.petitioners]; 
+                                      arr[idx].address = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, petitioners: arr }));
+                                    }}
+                                    placeholder="Full address"
+                                    rows={2}
+                                  />
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -804,48 +964,135 @@ export default function NewCasePage() {
                             <SelectItem value="Opponent">Opponent</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button type="button" onClick={() => setCaseData(prev => ({
-                          ...prev,
-                          respondents: [...(prev.respondents || []), { role: prev.respondentRole || 'Respondent', type: '', name: '', opposingCounsel: '' }]
-                        }))}>
-                          Add Party
+                        <Button 
+                          type="button" 
+                          onClick={() => setCaseData(prev => ({
+                            ...prev,
+                            respondents: [
+                              ...(prev.respondents || []), 
+                              { 
+                                role: prev.respondentRole || 'Respondent', 
+                                type: 'Individual', 
+                                name: '',
+                                email: '',
+                                contact: '',
+                                address: '',
+                                opposingCounsel: ''
+                              }
+                            ]
+                          }))}
+                        >
+                          Add Respondent
                         </Button>
                       </div>
                       {caseData.respondents && caseData.respondents.length > 0 && (
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                           {caseData.respondents.map((respondent, idx) => (
-                            <div key={idx} className="flex space-x-2 mb-2">
-                              {/* Remove role dropdown, use selected role */}
-                              <Input
-                                value={respondent.name}
-                                onChange={e => {
-                                  const arr = [...caseData.respondents]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, respondents: arr }));
-                                }}
-                                placeholder={`Enter ${respondent.role || caseData.respondentRole || 'Respondent'} name`}
-                              />
-                              <Select
-                                value={respondent.type}
-                                onValueChange={val => {
-                                  const arr = [...caseData.respondents]; arr[idx].type = val; setCaseData(prev => ({ ...prev, respondents: arr }));
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="Individual">Individual</SelectItem>
-                                  <SelectItem value="Corporation">Corporation</SelectItem>
-                                  <SelectItem value="Organization">Organization</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Input
-                                value={respondent.opposingCounsel}
-                                onChange={e => {
-                                  const arr = [...caseData.respondents]; arr[idx].opposingCounsel = e.target.value; setCaseData(prev => ({ ...prev, respondents: arr }));
-                                }}
-                                placeholder="Opposing Counsel"
-                              />
-                              <Button variant="ghost" onClick={() => setCaseData(prev => ({ ...prev, respondents: prev.respondents.filter((_, i) => i !== idx) }))}>Remove</Button>
+                            <div key={idx} className="border rounded-lg p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium">{respondent.role || 'Respondent'} {idx + 1}</h4>
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={() => setCaseData(prev => ({ 
+                                    ...prev, 
+                                    respondents: prev.respondents.filter((_, i) => i !== idx) 
+                                  }))}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label>Name</Label>
+                                  <Input
+                                    value={respondent.name}
+                                    onChange={e => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].name = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                    placeholder="Full name"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Type</Label>
+                                  <Select
+                                    value={respondent.type}
+                                    onValueChange={val => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].type = val; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="Individual">Individual</SelectItem>
+                                      <SelectItem value="Corporation">Corporation</SelectItem>
+                                      <SelectItem value="Organization">Organization</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Email</Label>
+                                  <Input
+                                    type="email"
+                                    value={respondent.email}
+                                    onChange={e => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].email = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                    placeholder="email@example.com"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Contact Number</Label>
+                                  <Input
+                                    type="tel"
+                                    value={respondent.contact}
+                                    onChange={e => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].contact = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                    placeholder="+91 XXXXXXXXXX"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label>Address</Label>
+                                  <Textarea
+                                    value={respondent.address}
+                                    onChange={e => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].address = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                    placeholder="Full address"
+                                    rows={2}
+                                  />
+                                </div>
+                                
+                                <div className="space-y-2 md:col-span-2">
+                                  <Label>Opposing Counsel</Label>
+                                  <Input
+                                    value={respondent.opposingCounsel}
+                                    onChange={e => {
+                                      const arr = [...caseData.respondents]; 
+                                      arr[idx].opposingCounsel = e.target.value; 
+                                      setCaseData(prev => ({ ...prev, respondents: arr }));
+                                    }}
+                                    placeholder="Name of the opposing counsel"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           ))}
                         </div>
