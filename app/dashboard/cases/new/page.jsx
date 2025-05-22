@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
+import { CalendarIcon, Check, ChevronsUpDown, Edit3, Eye, Filter, FolderOpen, PlusCircle, Search, Trash2, UploadCloud, Users, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -121,12 +122,70 @@ export default function NewCasePage() {
   const [isLawyer, setIsLawyer] = useState(true)
   const [selectedFiles, setSelectedFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({})
+  const [parties, setParties] = useState([])
 
   useEffect(() => {
     if (user) {
-      setIsLawyer(user.role === "lawyer" || user.role === "admin")
+      const isLawyer = user?.role === 'lawyer' || user?.role === 'admin';
+      setIsLawyer(isLawyer);
     }
   }, [user])
+
+  // Helper functions for managing associated clients (if user is a lawyer)
+  const updateCaseClientField = (index, field, value) => {
+    setCaseData(prev => {
+      const updatedClients = [...(prev.caseClients || [])];
+      updatedClients[index] = { ...updatedClients[index], [field]: value };
+      return { ...prev, caseClients: updatedClients };
+    });
+  };
+
+  const removeCaseClient = (index) => {
+    setCaseData(prev => ({
+      ...prev,
+      caseClients: (prev.caseClients || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const addCaseClient = () => {
+    setCaseData(prev => ({
+      ...prev,
+      caseClients: [...(prev.caseClients || []), { name: '', email: '', contact: '', address: '' }]
+    }));
+  };
+
+  // Helper function for adding an advocate (if user is a client)
+  const addAdvocate = () => {
+    setCaseData(prev => ({
+      ...prev,
+      advocates: [...(prev.advocates || []), { name: '', email: '', contact: '', company: '', gst: '', isLead: false, level: '', poc: '', spock: '' }]
+    }));
+  };
+
+  // Define district options
+  const districtOptions = [
+    { value: "bengaluru_urban", label: "Bengaluru Urban" },
+    { value: "bengaluru_rural", label: "Bengaluru Rural" },
+    { value: "mysuru", label: "Mysuru" },
+    { value: "mangaluru", label: "Mangaluru" },
+    { value: "belagavi", label: "Belagavi" },
+    { value: "kalaburagi", label: "Kalaburagi" },
+    { value: "dharwad", label: "Dharwad" },
+    { value: "tumakuru", label: "Tumakuru" },
+    { value: "shivamogga", label: "Shivamogga" },
+    { value: "vijayapura", label: "Vijayapura" },
+    { value: "davanagere", label: "Davanagere" },
+    { value: "ballari", label: "Ballari" },
+    { value: "udupi", label: "Udupi" },
+    { value: "raichur", label: "Raichur" },
+    { value: "hassan", label: "Hassan" },
+    { value: "mumbai", label: "Mumbai" },
+    { value: "pune", label: "Pune" },
+    { value: "nagpur", label: "Nagpur" },
+    { value: "chennai", label: "Chennai" },
+    { value: "coimbatore", label: "Coimbatore" },
+    { value: "madurai", label: "Madurai" },
+  ];
 
   const [caseData, setCaseData] = useState({
     title: "",
@@ -154,7 +213,8 @@ export default function NewCasePage() {
     actSections: "",
     reliefSought: "",
     notes: "",
-    advocates: []
+    advocates: [],
+    caseClients: []
   })
 
   const handleChange = (e) => {
@@ -327,6 +387,46 @@ export default function NewCasePage() {
       }
     }
 
+    // Validate associated clients if lawyer is creating the case
+    if (isLawyer && (section === 'all' || section === 'associatedParties')) {
+      if (!caseData.caseClients || caseData.caseClients.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please add at least one client for the case.",
+          variant: "destructive",
+        });
+        return;
+      }
+      for (let i = 0; i < caseData.caseClients.length; i++) {
+        const client = caseData.caseClients[i];
+        if (!client.name) {
+          toast({
+            title: "Error",
+            description: `Please enter a name for Client ${i + 1}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
+    // Validate advocates if client is adding them (optional, but if added, name is required)
+    if (!isLawyer && (section === 'all' || section === 'associatedParties')) {
+      if (caseData.advocates && caseData.advocates.length > 0) {
+        for (let i = 0; i < caseData.advocates.length; i++) {
+          const advocate = caseData.advocates[i];
+          if (!advocate.name) {
+            toast({
+              title: "Error",
+              description: `Please enter a name for Advocate ${i + 1}.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+    }
+
     try {
       setIsSubmitting(true);
       
@@ -381,8 +481,32 @@ export default function NewCasePage() {
           }))
         },
         
-        // Advocates
-        advocates: caseData.advocates || []
+        // Advocates or Clients, based on user role
+        ...(isLawyer 
+          ? { 
+              clients: (caseData.caseClients || []).map(client => ({
+                name: client.name,
+                email: client.email || "",
+                contact: client.contact || "",
+                address: client.address || ""
+              })),
+              advocates: [] // Ensure advocates array is empty or not present if lawyer is creating
+            } 
+          : { 
+              advocates: (caseData.advocates || []).map(adv => ({
+                name: adv.name,
+                email: adv.email || "",
+                contact: adv.contact || "",
+                company: adv.company || "",
+                gst: adv.gst || "",
+                isLead: !!adv.isLead,
+                level: adv.level || "",
+                poc: adv.poc || "",
+                spock: adv.spock || ""
+              })),
+              clients: [] // Ensure clients array is empty or not present if client is creating
+            }
+        )
       };
 
       let response;
@@ -419,7 +543,7 @@ export default function NewCasePage() {
         });
         
         // Redirect to the newly created case
-        router.push(`/dashboard/cases/${response.data?._id || response._id}`);
+        router.push('/dashboard/cases');
       }
       
       return response;
@@ -436,6 +560,38 @@ export default function NewCasePage() {
     }
   }
 
+  const addParty = () => {
+    setParties([...parties, { role: '', type: '', name: '', email: '', phone: '' }]);
+  };
+
+  const updateParty = (index, field, value) => {
+    const updatedParties = parties.map((party, i) =>
+      i === index ? { ...party, [field]: value } : party
+    );
+    setParties(updatedParties);
+  };
+
+  const removeParty = (index) => {
+    setParties(parties.filter((_, i) => i !== index));
+  };
+
+  const saveCase = async () => {
+    try {
+      const caseData = {
+        title: '',
+        caseNumber: '',
+        caseType: '',
+        status: '',
+        parties,
+      };
+
+      const response = await api.post('/api/cases', caseData);
+      toast.success('Case created successfully');
+    } catch (error) {
+      toast.error('Error creating case');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -449,7 +605,7 @@ export default function NewCasePage() {
               <TabsTrigger value="court">Court Information</TabsTrigger>
               <TabsTrigger value="party">Party Section</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="advocates">Advocates</TabsTrigger>
+              <TabsTrigger value="associatedParties">People</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details">
@@ -610,8 +766,7 @@ export default function NewCasePage() {
                       />
                     </div>
 
-                    {isLawyer && (
-                      <div className="space-y-2">
+                    <div className="space-y-2">
                         <Label htmlFor="actSections">Act & Sections</Label>
                         <Textarea
                           id="actSections"
@@ -622,7 +777,6 @@ export default function NewCasePage() {
                           placeholder="e.g., IPC Section 302, CrPC Section 161"
                         />
                       </div>
-                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="reliefSought">Relief Sought</Label>
@@ -656,7 +810,6 @@ export default function NewCasePage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {isLawyer && (
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div className="space-y-2">
@@ -763,7 +916,6 @@ export default function NewCasePage() {
                           />
                         </div>
                       </div>
-                    )}
 
                     <div className="space-y-2">
                       <Label htmlFor="notes">Additional Notes</Label>
@@ -1211,113 +1363,125 @@ export default function NewCasePage() {
                 </CardFooter>
               </Card>
             </TabsContent>
-             <TabsContent value="advocates">
+             <TabsContent value="associatedParties">
               <Card>
-                <CardHeader>
-                  <CardTitle>Advocates Section</CardTitle>
-                  <CardDescription>Add lead and associate advocates for this case (optional)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {(!caseData.advocates || caseData.advocates.length === 0) && (
-                      <Button type="button" onClick={() => setCaseData(prev => ({ ...prev, advocates: [{ name: '', email: '', contact: '', company: '', gst: '', isLead: false }]}))}>
-                        Add Advocate
-                      </Button>
-                    )}
-                    {caseData.advocates && caseData.advocates.map((advocate, idx) => (
-  <div key={idx} className="space-y-2 border p-3 rounded-md mb-2">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-      <Input
-        value={advocate.name}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Advocate Name"
-        required
-      />
-      <Input
-        type="email"
-        value={advocate.email}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].email = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Email"
-      />
-      <Input
-        value={advocate.contact}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].contact = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Contact"
-      />
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-      <Input
-        value={advocate.company}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].company = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Company"
-      />
-      <Input
-        value={advocate.gst}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].gst = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="GST"
-      />
-      <Input
-        value={advocate.spock}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].spock = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Spock Number"
-      />
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-      <Input
-        value={advocate.poc}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].poc = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        placeholder="Point of Contact"
-      />
-      <select
-        value={advocate.level || ''}
-        onChange={e => {
-          const arr = [...caseData.advocates]; arr[idx].level = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr }));
-        }}
-        className="border rounded px-2 py-1"
-      >
-        <option value="">Select Level</option>
-        <option value="Senior">Senior</option>
-        <option value="Junior">Junior</option>
-      </select>
-      <div className="flex items-center space-x-2">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={!!advocate.isLead}
-            onChange={e => {
-              const arr = [...caseData.advocates]; arr[idx].isLead = e.target.checked; setCaseData(prev => ({ ...prev, advocates: arr }));
-            }}
-            className="mr-2"
-          />
-          Lead Advocate
-        </label>
-        <Button variant="ghost" size="sm" onClick={() => setCaseData(prev => ({ ...prev, advocates: prev.advocates.filter((_, i) => i !== idx) }))}>Remove</Button>
-      </div>
-    </div>
-  </div>
-))}
-                    {/* Save Case button for Advocates section */}
-                    <div className="flex justify-end">
-                      <Button type="submit" form="case-form" disabled={isSubmitting}>
+                {isLawyer ? (
+                  // LAWYER VIEW: Adding Clients
+                  <>
+                    <CardHeader>
+                      <CardTitle>Associated Clients</CardTitle>
+                      <CardDescription>Add clients associated with this case. At least one client is required if you are creating the case.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {(caseData.caseClients || []).map((client, idx) => (
+                          <div key={idx} className="space-y-3 border p-4 rounded-lg shadow">
+                            <div className="flex justify-between items-center">
+                                <h4 className="font-medium">Client {idx + 1}</h4>
+                                <Button variant="ghost" size="sm" onClick={() => removeCaseClient(idx)}>Remove</Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor={`client-name-${idx}`}>Name <span className="text-red-500">*</span></Label>
+                                    <Input id={`client-name-${idx}`} value={client.name || ''} onChange={e => updateCaseClientField(idx, 'name', e.target.value)} placeholder="Full Name" required />
+                                </div>
+                                <div>
+                                    <Label htmlFor={`client-email-${idx}`}>Email</Label>
+                                    <Input id={`client-email-${idx}`} type="email" value={client.email || ''} onChange={e => updateCaseClientField(idx, 'email', e.target.value)} placeholder="email@example.com" />
+                                </div>
+                                <div>
+                                    <Label htmlFor={`client-contact-${idx}`}>Contact Number</Label>
+                                    <Input id={`client-contact-${idx}`} type="tel" value={client.contact || ''} onChange={e => updateCaseClientField(idx, 'contact', e.target.value)} placeholder="+91 XXXXXXXXXX" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Label htmlFor={`client-address-${idx}`}>Address</Label>
+                                    <Textarea id={`client-address-${idx}`} value={client.address || ''} onChange={e => updateCaseClientField(idx, 'address', e.target.value)} placeholder="Full Address" rows={2}/>
+                                </div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button type="button" onClick={addCaseClient} variant="outline" className="mt-4">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Client
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </>
+                ) : (
+                  // CLIENT VIEW: Adding Advocates
+                  <>
+                    <CardHeader>
+                      <CardTitle>Your Advocates</CardTitle>
+                      <CardDescription>Add your lead and associate advocates for this case (optional)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-6">
+                        {(caseData.advocates || []).map((advocate, idx) => (
+                          <div key={idx} className="space-y-3 border p-4 rounded-lg shadow">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium">Advocate {idx + 1}</h4>
+                              <Button variant="ghost" size="sm" onClick={() => setCaseData(prev => ({ ...prev, advocates: prev.advocates.filter((_, i) => i !== idx) }))}>Remove</Button>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <Label htmlFor={`adv-name-${idx}`}>Name <span className="text-red-500">*</span></Label>
+                                <Input id={`adv-name-${idx}`} value={advocate.name || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].name = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Advocate Name" required />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-email-${idx}`}>Email</Label>
+                                <Input id={`adv-email-${idx}`} type="email" value={advocate.email || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].email = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Email" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-contact-${idx}`}>Contact</Label>
+                                <Input id={`adv-contact-${idx}`} value={advocate.contact || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].contact = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Contact" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-company-${idx}`}>Company</Label>
+                                <Input id={`adv-company-${idx}`} value={advocate.company || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].company = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Company" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-gst-${idx}`}>GST</Label>
+                                <Input id={`adv-gst-${idx}`} value={advocate.gst || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].gst = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="GST" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-spock-${idx}`}>Spock Number</Label>
+                                <Input id={`adv-spock-${idx}`} value={advocate.spock || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].spock = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Spock Number" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-poc-${idx}`}>Point of Contact</Label>
+                                <Input id={`adv-poc-${idx}`} value={advocate.poc || ''} onChange={e => { const arr = [...caseData.advocates]; arr[idx].poc = e.target.value; setCaseData(prev => ({ ...prev, advocates: arr })); }} placeholder="Point of Contact" />
+                              </div>
+                              <div>
+                                <Label htmlFor={`adv-level-${idx}`}>Level</Label>
+                                <Select value={advocate.level || ''} onValueChange={val => { const arr = [...caseData.advocates]; arr[idx].level = val; setCaseData(prev => ({ ...prev, advocates: arr })); }}>
+                                  <SelectTrigger id={`adv-level-${idx}`}>
+                                    <SelectValue placeholder="Select Level" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Senior">Senior</SelectItem>
+                                    <SelectItem value="Junior">Junior</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex items-center space-x-2 md:col-span-1 md:pt-7"> {/* Adjusted for alignment */} 
+                                <Checkbox id={`adv-isLead-${idx}`} checked={!!advocate.isLead} onCheckedChange={checked => { const arr = [...caseData.advocates]; arr[idx].isLead = !!checked; setCaseData(prev => ({ ...prev, advocates: arr })); }} />
+                                <Label htmlFor={`adv-isLead-${idx}`} className="font-normal">Lead Advocate</Label>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        <Button type="button" onClick={addAdvocate} variant="outline" className="mt-4">
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add Advocate
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </>
+                )}
+                <CardFooter className="flex justify-between mt-6 pt-6 border-t">
+                    <Button variant="outline" onClick={() => router.push("/dashboard/cases")}>Cancel</Button>
+                    <Button type="submit" form="case-form" disabled={isSubmitting}>
                         {isSubmitting ? "Saving..." : "Save Case"}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
+                    </Button>
+                </CardFooter>
               </Card>
             </TabsContent>
           </Tabs>

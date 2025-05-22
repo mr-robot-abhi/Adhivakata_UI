@@ -32,7 +32,7 @@ export default function Sidebar() {
   const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user")) : null
 
   // Determine if user is lawyer or client
-  const isLawyer = user?.role === "lawyer" || user?.role === "admin"
+  const isLawyer = user?.role === "lawyer"
   const navItems = isLawyer ? getLawyerNavItems() : getClientNavItems()
 
   return (
@@ -98,7 +98,7 @@ export default function Sidebar() {
           <div className="overflow-hidden">
             <p className="text-sm font-medium truncate">{user?.name || "User"}</p>
             <p className="text-xs text-muted-foreground truncate">
-              {user?.role === "lawyer" ? "Lawyer" : user?.role === "admin" ? "Administrator" : "Client"}
+              {user?.role === "lawyer" ? "Lawyer" : "Client"}
             </p>
           </div>
         </div>

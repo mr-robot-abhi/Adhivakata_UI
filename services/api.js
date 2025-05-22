@@ -15,7 +15,9 @@ const handleResponse = async (response) => {
 // Helper function to get auth token
 const getToken = () => {
   if (typeof window !== "undefined") {
-    return localStorage.getItem("auth_token")
+    const token = localStorage.getItem("auth_token")
+    console.log("Retrieved token:", token) // Debugging log
+    return token
   }
   return null
 }
@@ -29,6 +31,7 @@ const createHeaders = (contentType = "application/json") => {
   const token = getToken()
   if (token) {
     headers["Authorization"] = `Bearer ${token}`
+    console.log("Request headers:", headers) // Debugging log
   }
 
   return headers

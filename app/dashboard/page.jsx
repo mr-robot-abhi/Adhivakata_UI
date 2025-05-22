@@ -11,7 +11,7 @@ import api from "@/services/api"
 
 export default function DashboardPage() {
   const { user } = useAuth()
-  const isLawyer = user?.role === "lawyer" || user?.role === "admin"
+  const isLawyer = user?.role === "lawyer"
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)

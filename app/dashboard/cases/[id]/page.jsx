@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Calendar, Clock, FileText, MapPin, User, Users, AlertTriangle, CheckCircle } from "lucide-react"
 import api from "@/services/api"
+import PartyDetails from "@/components/ui/party-details"
 
 export default function CaseDetailsPage() {
   const { id } = useParams()
@@ -20,6 +21,7 @@ export default function CaseDetailsPage() {
   const [error, setError] = useState(null)
   const [documents, setDocuments] = useState([])
   const [events, setEvents] = useState([])
+  
 
   useEffect(() => {
     const fetchCaseDetails = async () => {
@@ -30,14 +32,31 @@ export default function CaseDetailsPage() {
         const response = await api.cases.getById(id)
         console.log("Case details response:", response)
 
-        // Handle different response formats
+        let rawData;
         if (response && response.data) {
-          setCaseData(response.data)
-        } else if (response) {
-          setCaseData(response)
+          console.log('API response.data:', response.data);
+          rawData = response.data;
+        } else if (response) { // Should ideally not hit this if API is consistent
+          console.log('API response (direct):', response);
+          rawData = response;
         } else {
-          throw new Error("Invalid response format")
+          throw new Error("Invalid response format");
         }
+
+        const processedData = {
+          ...rawData,
+          clients: Array.isArray(rawData.clients) ? rawData.clients : [],
+          advocates: Array.isArray(rawData.advocates) ? rawData.advocates : [],
+          parties: {
+            ...(rawData.parties || {}),
+            petitioner: Array.isArray(rawData.parties?.petitioner) ? rawData.parties.petitioner : [],
+            respondent: Array.isArray(rawData.parties?.respondent) ? rawData.parties.respondent : []
+          }
+        };
+        console.log('Processed caseData.parties:', processedData.parties);
+        console.log('Processed caseData.advocates:', processedData.advocates);
+        console.log('Processed caseData.clients:', processedData.clients);
+        setCaseData(processedData);
 
         // Fetch related documents if available
         try {
@@ -125,7 +144,7 @@ export default function CaseDetailsPage() {
     )
   }
 
-  const isLawyer = user?.role === "lawyer" || user?.role === "admin"
+  const isLawyer = user?.role === "lawyer"
 
   return (
     <div className="space-y-6">
@@ -144,7 +163,7 @@ export default function CaseDetailsPage() {
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details">Case Details</TabsTrigger>
-              <TabsTrigger value="parties">Parties</TabsTrigger>
+              <TabsTrigger value="people">People</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="hearings">Hearings</TabsTrigger>
             </TabsList>
@@ -274,114 +293,118 @@ export default function CaseDetailsPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="parties">
+            <TabsContent value="people">
               <Card>
                 <CardHeader>
-                  <CardTitle>Parties</CardTitle>
-                  <CardDescription>Case parties and their representatives</CardDescription>
+                  <CardTitle>People Involved</CardTitle>
+                  <CardDescription>Key individuals and parties associated with the case.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-8">
-                  {/* Petitioners/Plaintiffs/Appellants/Complainants Section */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Petitioners/Plaintiffs/Appellants/Complainants</h3>
+                <CardContent className="space-y-6">
+                  {/* Primary Lawyer Display */}
+                  {caseData.lawyer && (
+                    <div className="mb-4 pb-4 border-b">
+                      <h3 className="text-md font-semibold mb-2 text-gray-700">Primary Lawyer</h3>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="flex items-center text-sm"><User className="mr-2 h-4 w-4 text-gray-500" /> <strong>{caseData.lawyer.name}</strong></p>
+                        {caseData.lawyer.email && <p className="text-xs text-gray-500 ml-6">{caseData.lawyer.email}</p>}
+                      </div>
                     </div>
-                    {caseData.parties?.petitioner?.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.parties.petitioner.map((party, idx) => (
-                          <div key={`petitioner-${idx}`} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">{party.name}</p>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  <span className="capitalize">{party.role}</span>
-                                  {party.type && <span className="ml-2">• {party.type}</span>}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg">
-                        <Users className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">No petitioners/plaintiffs/appellants/complainants added</p>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* Respondents/Defendants/Accused/Opponents Section */}
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-semibold">Respondents/Defendants/Accused/Opponents</h3>
+                  {/* Primary Client Display */}
+                  {caseData.client && (
+                    <div className="mb-4 pb-4 border-b">
+                      <h3 className="text-md font-semibold mb-2 text-gray-700">Primary Client</h3>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="flex items-center text-sm"><User className="mr-2 h-4 w-4 text-gray-500" /> <strong>{caseData.client.name}</strong></p>
+                        {caseData.client.email && <p className="text-xs text-gray-500 ml-6">{caseData.client.email}</p>}
+                      </div>
                     </div>
-                    {caseData.parties?.respondent?.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.parties.respondent.map((party, idx) => (
-                          <div key={`respondent-${idx}`} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-medium">{party.name}</p>
-                                <div className="text-sm text-muted-foreground mt-1">
-                                  <span className="capitalize">{party.role}</span>
-                                  {party.type && <span className="ml-2">• {party.type}</span>}
-                                  {party.opposingCounsel && (
-                                    <div className="mt-2 text-sm bg-muted/50 p-2 rounded">
-                                      <p className="font-medium">Opposing Counsel:</p>
-                                      <p>{party.opposingCounsel}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg">
-                        <Users className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">No respondents/defendants/accused/opponents added</p>
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* Advocates Section */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Advocates</h3>
-                    {caseData.advocates?.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.advocates.map((advocate, idx) => (
-                          <div key={`advocate-${idx}`} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <div className="flex items-center">
-                                  <p className="font-medium">{advocate.name}</p>
-                                  {advocate.isLead && (
-                                    <Badge variant="secondary" className="ml-2">
-                                      Lead
-                                    </Badge>
-                                  )}
-                                </div>
-                                {advocate.email && <p className="text-sm text-muted-foreground">{advocate.email}</p>}
-                                {advocate.contact && <p className="text-sm text-muted-foreground">{advocate.contact}</p>}
-                                {advocate.company && <p className="text-sm text-muted-foreground">{advocate.company}</p>}
-                              </div>
-                              {advocate.level && (
-                                <Badge variant={advocate.level === "Senior" ? "default" : "outline"}>
-                                  {advocate.level}
-                                </Badge>
-                              )}
+                  {/* Conditionally display Clients list for Lawyers */}
+                  {isLawyer && caseData.clients.length > 0 && (() => {
+                    console.log('Render phase - caseData.clients:', caseData.clients); // DEBUG LOG
+                    return (
+                    <div className="mb-4 pb-4 border-b">
+                      <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
+                      {caseData.clients.map((client, index) => (
+                        <div key={client._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
+                          <p className="font-medium text-sm">{client.name}</p>
+                          {client.email && <p className="text-xs text-gray-600">Email: {client.email}</p>}
+                          {client.contact && <p className="text-xs text-gray-600">Contact: {client.contact}</p>}
+                          {client.address && <p className="text-xs text-gray-600">Address: {client.address}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  );})()}
+                  {isLawyer && caseData.clients.length === 0 && (
+                     <div className="mb-4 pb-4 border-b">
+                        <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
+                        <p className="text-sm text-muted-foreground">No additional clients associated by you.</p>
+                     </div>
+                  )}
+
+                  {/* Conditionally display Advocates list for Clients */}
+                  {!isLawyer && caseData.advocates.length > 0 && (
+                    <div className="mb-4 pb-4 border-b">
+                      <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Advocates</h3>
+                      {caseData.advocates.map((advocate, index) => (
+                        <div key={advocate._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
+                          <p className="font-medium text-sm">{advocate.name} {advocate.isLead && <Badge variant="secondary" size="sm" className="ml-2">Lead</Badge>}</p>
+                          {advocate.email && <p className="text-xs text-gray-600">Email: {advocate.email}</p>}
+                          {advocate.contact && <p className="text-xs text-gray-600">Contact: {advocate.contact}</p>}
+                          {advocate.company && <p className="text-xs text-gray-600">Company: {advocate.company}</p>}
+                          {advocate.gst && <p className="text-xs text-gray-600">GST: {advocate.gst}</p>}
+                          {advocate.level && <p className="text-xs text-gray-600">Level: {advocate.level}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!isLawyer && caseData.advocates.length === 0 && (
+                    <div className="mb-4 pb-4 border-b">
+                        <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Advocates</h3>
+                        <p className="text-sm text-muted-foreground">No additional advocates associated by you.</p>
+                    </div>
+                  )}
+
+                  {/* Parties to the Case (Petitioners/Respondents) */}
+                  {caseData.parties && (caseData.parties.petitioner?.length > 0 || caseData.parties.respondent?.length > 0) && (
+                    <div>
+                      <h3 className="text-md font-semibold mb-2 text-gray-700">Other Parties to the Case</h3>
+                      {caseData.parties.petitioner.length > 0 && (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium mb-1 text-gray-600">Petitioners/Appellants</h4>
+                          {caseData.parties.petitioner.map((p, i) => (
+                            <div key={`petitioner-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-xs">
+                              <p><strong>Name:</strong> {p.name}</p>
+                              {p.role && <p><strong>Role:</strong> {p.role}</p>}
+                              {p.type && <p><strong>Type:</strong> {p.type}</p>}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 border rounded-lg">
-                        <User className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">No advocates have been added to this case</p>
-                      </div>
-                    )}
-                  </div>
+                          ))}
+                        </div>
+                      )}
+                      {caseData.parties.respondent.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-1 text-gray-600">Respondents/Defendants</h4>
+                          {caseData.parties.respondent.map((r, i) => (
+                            <div key={`respondent-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-xs">
+                              <p><strong>Name:</strong> {r.name}</p>
+                              {r.role && <p><strong>Role:</strong> {r.role}</p>}
+                              {r.type && <p><strong>Type:</strong> {r.type}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  { /* Fallback if no people or parties at all */}
+                  { !caseData.lawyer && !caseData.client && 
+                    caseData.clients.length === 0 && 
+                    caseData.advocates.length === 0 && 
+                    (caseData.parties.petitioner.length === 0 && caseData.parties.respondent.length === 0) && (
+                      <p className="text-sm text-muted-foreground text-center py-4">No people or party information available for this case.</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

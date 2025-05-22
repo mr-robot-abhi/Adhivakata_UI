@@ -27,7 +27,7 @@ export default function CasesPage() {
   useEffect(() => {
     // Check if user is lawyer or client
     if (user) {
-      setIsLawyer(user.role === "lawyer" || user.role === "admin")
+      setIsLawyer(user.role === "lawyer")
     }
   }, [user])
 
