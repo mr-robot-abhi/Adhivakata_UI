@@ -323,21 +323,22 @@ export default function CaseDetailsPage() {
                   )}
 
                   {/* Conditionally display Clients list for Lawyers */}
-                  {isLawyer && caseData.clients.length > 0 && (() => {
-                    console.log('Render phase - caseData.clients:', caseData.clients); // DEBUG LOG
-                    return (
+                  {isLawyer && caseData.clients.length > 0 && (
+                    <>
+                      {console.log('Render (clients list) - caseData.clients:', caseData.clients)} {/* NEW DEBUG LOG */}
                     <div className="mb-4 pb-4 border-b">
                       <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
                       {caseData.clients.map((client, index) => (
                         <div key={client._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
                           <p className="font-medium text-sm">{client.name}</p>
-                          {client.email && <p className="text-xs text-gray-600">Email: {client.email}</p>}
-                          {client.contact && <p className="text-xs text-gray-600">Contact: {client.contact}</p>}
-                          {client.address && <p className="text-xs text-gray-600">Address: {client.address}</p>}
+                          {client.email && <p className="text-sm text-gray-500">Email: {client.email}</p>}
+                          {client.contact && <p className="text-sm text-gray-500">Contact: {client.contact}</p>}
+                          {client.address && <p className="text-sm text-gray-500">Address: {client.address}</p>}
                         </div>
                       ))}
                     </div>
-                  );})()}
+                    </>
+                  )}
                   {isLawyer && caseData.clients.length === 0 && (
                      <div className="mb-4 pb-4 border-b">
                         <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
@@ -352,11 +353,11 @@ export default function CaseDetailsPage() {
                       {caseData.advocates.map((advocate, index) => (
                         <div key={advocate._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
                           <p className="font-medium text-sm">{advocate.name} {advocate.isLead && <Badge variant="secondary" size="sm" className="ml-2">Lead</Badge>}</p>
-                          {advocate.email && <p className="text-xs text-gray-600">Email: {advocate.email}</p>}
-                          {advocate.contact && <p className="text-xs text-gray-600">Contact: {advocate.contact}</p>}
-                          {advocate.company && <p className="text-xs text-gray-600">Company: {advocate.company}</p>}
-                          {advocate.gst && <p className="text-xs text-gray-600">GST: {advocate.gst}</p>}
-                          {advocate.level && <p className="text-xs text-gray-600">Level: {advocate.level}</p>}
+                          {advocate.email && <p className="text-sm text-gray-500">Email: {advocate.email}</p>}
+                          {advocate.contact && <p className="text-sm text-gray-500">Contact: {advocate.contact}</p>}
+                          {advocate.company && <p className="text-sm text-gray-500">Company: {advocate.company}</p>}
+                          {advocate.gst && <p className="text-sm text-gray-500">GST: {advocate.gst}</p>}
+                          {advocate.level && <p className="text-sm text-gray-500">Level: {advocate.level}</p>}
                         </div>
                       ))}
                     </div>
@@ -376,7 +377,7 @@ export default function CaseDetailsPage() {
                         <div className="mb-3">
                           <h4 className="text-sm font-medium mb-1 text-gray-600">Petitioners/Appellants</h4>
                           {caseData.parties.petitioner.map((p, i) => (
-                            <div key={`petitioner-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-xs">
+                            <div key={`petitioner-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-sm">
                               <p><strong>Name:</strong> {p.name}</p>
                               {p.role && <p><strong>Role:</strong> {p.role}</p>}
                               {p.type && <p><strong>Type:</strong> {p.type}</p>}
@@ -388,7 +389,7 @@ export default function CaseDetailsPage() {
                         <div>
                           <h4 className="text-sm font-medium mb-1 text-gray-600">Respondents/Defendants</h4>
                           {caseData.parties.respondent.map((r, i) => (
-                            <div key={`respondent-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-xs">
+                            <div key={`respondent-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-sm">
                               <p><strong>Name:</strong> {r.name}</p>
                               {r.role && <p><strong>Role:</strong> {r.role}</p>}
                               {r.type && <p><strong>Type:</strong> {r.type}</p>}

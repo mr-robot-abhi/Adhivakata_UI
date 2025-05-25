@@ -141,11 +141,30 @@ export default function NewCasePage() {
   };
 
   const removeCaseClient = (index) => {
+    setCaseData(prev => ({ ...prev, caseClients: prev.caseClients.filter((_, i) => i !== index) }));
+  };
+
+  // Stakeholder Management Functions
+  const addStakeholder = () => {
     setCaseData(prev => ({
       ...prev,
-      caseClients: (prev.caseClients || []).filter((_, i) => i !== index)
+      stakeholders: [...(prev.stakeholders || []), { name: '', email: '', contact: '', address: '', roleInCase: '' }]
     }));
   };
+
+  const updateStakeholderField = (index, field, value) => {
+    setCaseData(prev => {
+      const updatedStakeholders = [...(prev.stakeholders || [])];
+      updatedStakeholders[index] = { ...updatedStakeholders[index], [field]: value };
+      return { ...prev, stakeholders: updatedStakeholders };
+    });
+  };
+
+  const removeStakeholder = (index) => {
+    setCaseData(prev => ({ ...prev, stakeholders: prev.stakeholders.filter((_, i) => i !== index) }));
+  };
+
+
 
   const addCaseClient = () => {
     setCaseData(prev => ({
@@ -214,7 +233,8 @@ export default function NewCasePage() {
     reliefSought: "",
     notes: "",
     advocates: [],
-    caseClients: []
+    caseClients: [],
+    stakeholders: [], // Initialize stakeholders
   })
 
   const handleChange = (e) => {
@@ -236,7 +256,7 @@ export default function NewCasePage() {
         [name]: value,
         bench: value === "high_court" && prev.courtState === "karnataka" ? "bengaluru" : "",
       }))
-    } else if (name === "petitionerRole" || name === "opposingRole" || name === "petitionerType") {
+    } else if (name === "petitionerRole" || name === "respondentRole" || name === "petitionerType") {
       setCaseData((prev) => ({ ...prev, [name]: value }))
     } else {
       setCaseData((prev) => ({ ...prev, [name]: value }))
@@ -490,8 +510,15 @@ export default function NewCasePage() {
                 contact: client.contact || "",
                 address: client.address || ""
               })),
-              advocates: [] // Ensure advocates array is empty or not present if lawyer is creating
-            } 
+              advocates: [], // Ensure advocates array is empty or not present if lawyer is creating
+              stakeholders: (caseData.stakeholders || []).map(stakeholder => ({
+                name: stakeholder.name,
+                email: stakeholder.email || "",
+                contact: stakeholder.contact || "",
+                address: stakeholder.address || "",
+                roleInCase: stakeholder.roleInCase || ""
+              }))
+            }
           : { 
               advocates: (caseData.advocates || []).map(adv => ({
                 name: adv.name,
@@ -499,12 +526,19 @@ export default function NewCasePage() {
                 contact: adv.contact || "",
                 company: adv.company || "",
                 gst: adv.gst || "",
-                isLead: !!adv.isLead,
+                isLead: adv.isLead || false,
                 level: adv.level || "",
                 poc: adv.poc || "",
                 spock: adv.spock || ""
               })),
-              clients: [] // Ensure clients array is empty or not present if client is creating
+              caseClients: [],
+              stakeholders: (caseData.stakeholders || []).map(stakeholder => ({
+                name: stakeholder.name,
+                email: stakeholder.email || "",
+                contact: stakeholder.contact || "",
+                address: stakeholder.address || "",
+                roleInCase: stakeholder.roleInCase || ""
+              }))
             }
         )
       };
@@ -996,7 +1030,7 @@ export default function NewCasePage() {
                             ]
                           }))}
                         >
-                          Add Petitioner
+                          Add {caseData.petitionerRole || 'Petitioner'}
                         </Button>
                       </div>
                       {caseData.petitioners && caseData.petitioners.length > 0 && (
@@ -1134,7 +1168,7 @@ export default function NewCasePage() {
                             ]
                           }))}
                         >
-                          Add Respondent
+                          Add {caseData.respondentRole || 'Respondent'}
                         </Button>
                       </div>
                       {caseData.respondents && caseData.respondents.length > 0 && (
@@ -1476,6 +1510,51 @@ export default function NewCasePage() {
                     </CardContent>
                   </>
                 )}
+                {/* Stakeholder Section - Common for both Lawyer and Client */}
+                <div className="mt-6 pt-6 border-t">
+                  <CardHeader>
+                    <CardTitle>Stakeholders</CardTitle>
+                    <CardDescription>Add other parties involved in the case (e.g., witnesses, experts, beneficiaries).</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      {(caseData.stakeholders || []).map((stakeholder, idx) => (
+                        <div key={idx} className="space-y-3 border p-4 rounded-lg shadow">
+                          <div className="flex justify-between items-center">
+                            <h4 className="font-medium">Stakeholder {idx + 1}</h4>
+                            <Button variant="ghost" size="sm" onClick={() => removeStakeholder(idx)}>Remove</Button>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <Label htmlFor={`stakeholder-name-${idx}`}>Name <span className="text-red-500">*</span></Label>
+                              <Input id={`stakeholder-name-${idx}`} value={stakeholder.name || ''} onChange={e => updateStakeholderField(idx, 'name', e.target.value)} placeholder="Full Name" required />
+                            </div>
+                            <div>
+                              <Label htmlFor={`stakeholder-role-${idx}`}>Role/Relation in Case</Label>
+                              <Input id={`stakeholder-role-${idx}`} value={stakeholder.roleInCase || ''} onChange={e => updateStakeholderField(idx, 'roleInCase', e.target.value)} placeholder="e.g., Witness, Expert" />
+                            </div>
+                            <div>
+                              <Label htmlFor={`stakeholder-email-${idx}`}>Email</Label>
+                              <Input id={`stakeholder-email-${idx}`} type="email" value={stakeholder.email || ''} onChange={e => updateStakeholderField(idx, 'email', e.target.value)} placeholder="email@example.com" />
+                            </div>
+                            <div>
+                              <Label htmlFor={`stakeholder-contact-${idx}`}>Contact Number</Label>
+                              <Input id={`stakeholder-contact-${idx}`} type="tel" value={stakeholder.contact || ''} onChange={e => updateStakeholderField(idx, 'contact', e.target.value)} placeholder="+91 XXXXXXXXXX" />
+                            </div>
+                            <div className="md:col-span-2">
+                              <Label htmlFor={`stakeholder-address-${idx}`}>Address</Label>
+                              <Textarea id={`stakeholder-address-${idx}`} value={stakeholder.address || ''} onChange={e => updateStakeholderField(idx, 'address', e.target.value)} placeholder="Full Address" rows={2}/>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button type="button" onClick={addStakeholder} variant="outline" className="mt-4">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Stakeholder
+                      </Button>
+                    </div>
+                  </CardContent>
+                </div>
+
                 <CardFooter className="flex justify-between mt-6 pt-6 border-t">
                     <Button variant="outline" onClick={() => router.push("/dashboard/cases")}>Cancel</Button>
                     <Button type="submit" form="case-form" disabled={isSubmitting}>
