@@ -3,7 +3,23 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, FileTextIcon, BarChart3Icon, ClockIcon, AlertCircleIcon, FolderOpen } from "lucide-react"
+import { CalendarIcon, FileTextIcon, BarChart3Icon, ClockIcon, AlertCircleIcon, FolderOpen, Users } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  LabelList,
+  ResponsiveContainer
+} from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -16,55 +32,54 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [isNewUser, setIsNewUser] = useState(false)
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        try {
-          // Fetch dashboard summary
-          const summary = await api.dashboard.getSummary()
+  // Keep a reference to fetchDashboardData for manual refresh
+  const fetchDashboardData = async () => {
+    try {
+      // Fetch dashboard summary
+      const summary = await api.dashboard.getSummary()
+      console.log('DASHBOARD SUMMARY:', summary);
 
-          // Fetch recent cases
-          const recentCases = await api.dashboard.getRecentCases()
+      // Fetch recent cases
+      const recentCases = await api.dashboard.getRecentCases()
 
-          // Fetch upcoming events
-          const upcomingEvents = await api.dashboard.getUpcomingEvents()
+      // Fetch upcoming events
+      const upcomingEvents = await api.dashboard.getUpcomingEvents()
 
-          setDashboardData({
-            summary,
-            recentCases: recentCases || [],
-            upcomingEvents: upcomingEvents || [],
-          })
+      console.log('Fetched summary:', summary);
+      console.log('Fetched recentCases:', recentCases);
+      console.log('Fetched upcomingEvents:', upcomingEvents);
+      setDashboardData({
+        summary,
+        recentCases: recentCases || [],
+        upcomingEvents: upcomingEvents || [],
+      })
 
-          // If no cases, consider this a new user
-          setIsNewUser(recentCases && recentCases.length === 0)
-        } catch (error) {
-          console.error("Error fetching dashboard data:", error)
-          // Set as new user if we can't fetch data
-          setIsNewUser(true)
-
-          // Set empty dashboard data
-          setDashboardData({
-            summary: {
-              activeCases: 0,
-              urgentCases: 0,
-              upcomingHearings: 0,
-              successRate: "0%",
-              documents: 0,
-            },
-            recentCases: [],
-            upcomingEvents: [],
-          })
-        } finally {
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("Error in fetchDashboardData:", error)
-        setLoading(false)
-      }
+      // If no cases, consider this a new user
+      setIsNewUser(recentCases && recentCases.length === 0)
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error)
+      // Set as new user if we can't fetch data
+      setIsNewUser(true)
+      setDashboardData({
+        summary: {
+          activeCases: 0,
+          urgentCases: 0,
+          upcomingHearings: 0,
+          successRate: "0%",
+          documents: 0,
+          totalCases: 0,
+        },
+        recentCases: [],
+        upcomingEvents: [],
+      });
+    } finally {
+      setLoading(false);
     }
+  };
 
-    fetchDashboardData()
-  }, [])
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
   if (loading) {
     return (
@@ -82,7 +97,23 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          {/* Show Refresh button if not loading and not new user */}
+          {!loading && !isNewUser && (
+            <button
+              onClick={() => {
+                setLoading(true);
+                fetchDashboardData();
+              }}
+              className="ml-2 px-3 py-1 border rounded text-sm bg-white hover:bg-gray-100 border-gray-300"
+              title="Refresh Dashboard"
+              type="button"
+            >
+              Refresh
+            </button>
+          )}
+        </div>
         <div className="text-sm text-muted-foreground">Welcome, {user?.name || "User"}</div>
       </div>
 
@@ -205,116 +236,110 @@ function NewUserDashboard({ isLawyer, user }) {
   )
 }
 
+import DashboardStats from "@/components/dashboard/DashboardStats";
+
 function LawyerDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {}
 
+  // Stat values (dynamic, fallback to 0)
+  const totalCases = summary?.activeCases || 0;
+  const pendingTasks = summary?.urgentCases || 0;
+  const activeClients = summary?.activeClients || 0;
+
+  // Bar chart data
+  const barChartData = [
+    { label: 'Open Cases', value: summary?.openCases || 0 },
+    { label: 'Closed Cases', value: summary?.closedCases || 0 },
+    { label: 'Pending Cases', value: summary?.pendingCases || 0 }
+  ];
+
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <FileTextIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Cases</p>
-                <h3 className="text-2xl font-bold">{summary?.activeCases || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stat Boxes */}
+      <DashboardStats
+        totalCases={totalCases}
+        pendingTasks={pendingTasks}
+        activeThirdParty={activeClients}
+        activeLabel="Active Clients"
+        totalCasesDesc="Managed across all clients"
+        pendingTasksDesc="Requires immediate attention"
+        activeThirdPartyDesc="Currently engaged clients"
+      />
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <AlertCircleIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Urgent Cases</p>
-                <h3 className="text-2xl font-bold">{summary?.urgentCases || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <CalendarIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Upcoming Hearings</p>
-                <h3 className="text-2xl font-bold">{summary?.upcomingHearings || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <BarChart3Icon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Case Success Rate</p>
-                <h3 className="text-2xl font-bold">{summary?.successRate || "0%"}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+      {/* Bar Chart & Upcoming Events Section */}
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        {/* Bar Chart Section */}
+        <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>Recent Cases</CardTitle>
-            <CardDescription>Your most recently updated cases</CardDescription>
+            <CardTitle>Case Statistics</CardTitle>
+            <CardDescription>Open, Closed, and Pending Cases</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentCases?.length > 0 ? (
-                Array.from(new Map(recentCases.map(c => [c.caseNumber || c.id, c])).values()).map((caseItem, index) => (
-                  <div key={caseItem.id || caseItem.caseNumber || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                    <div>
-                      <div className="flex items-center">
-                        <p className="font-medium">{caseItem.title}</p>
-                        {caseItem.urgent && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                            Urgent
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {caseItem.type} • {caseItem.court}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm text-muted-foreground">{caseItem.date}</p>
-                      <Link href={`/dashboard/cases/${caseItem.id}`}>
-                        <Button size="sm" variant="outline">View</Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6">
-                  <FileTextIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No cases yet</p>
-                  <Link href="/dashboard/cases/new">
-                    <Button variant="outline" className="mt-2">
-                      Add Your First Case
-                    </Button>
-                  </Link>
-                </div>
-              )}
+            {/* --- RECHARTS-ONLY BAR CHART --- */}
+            <div className="bg-card p-2 rounded-lg">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={[
+                    { name: "Open", value: summary?.activeCases || 0 },
+                    { name: "Closed", value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
+                    { name: "Pending", value: summary?.urgentCases || 0 }
+                  ]}
+                  layout="vertical"
+                  margin={{ left: 32, right: 32, top: 16, bottom: 16 }}
+                  barCategoryGap={32}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#222", fontSize: 14, fontWeight: 500 }}
+                    width={90}
+                  />
+                  <XAxis type="number" hide />
+                  <Tooltip
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const color = payload[0].color || '#222';
+                        return (
+                          <div style={{
+                            background: 'rgba(255,255,255,0.92)',
+                            borderRadius: '999px',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                            padding: '8px 18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 700,
+                            fontSize: 16,
+                            color: '#111',
+                            border: '1.5px solid #eee',
+                            gap: 8
+                          }}>
+                            <span style={{ fontSize: 22, marginRight: 8, color }}>{'●'}</span>
+                            <span style={{ fontWeight: 700 }}>{payload[0].value} Cases</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    radius={8}
+                    minPointSize={8}
+                    fill="#888"
+                    isAnimationActive={true}
+                    barSize={24}
+                    className="transition-all duration-200 shadow-lg hover:scale-[1.05] hover:fill-gray-600 cursor-pointer"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-
+        {/* Upcoming Hearings Section */}
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Hearings</CardTitle>
@@ -351,6 +376,52 @@ function LawyerDashboard({ data }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Cases Section */}
+      <Card className="mt-8 shadow-md">
+        <CardHeader>
+          <CardTitle>Recent Cases</CardTitle>
+          <CardDescription>Your most recently updated cases</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Case Title</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Advocate</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Next Hearing</th>
+                  <th className="px-4 py-2"></th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {recentCases?.length > 0 ? (
+                  recentCases.map((caseItem, idx) => (
+                    <tr key={caseItem.id || caseItem.caseNumber || idx} className="hover:bg-gray-100 transition">
+                      <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">{caseItem.title}</td>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">{caseItem.advocateName || '-'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${caseItem.status === 'Open' ? 'bg-gray-200 text-black' : caseItem.status === 'Closed' ? 'bg-gray-700 text-white' : 'bg-gray-400 text-white'}`}>{caseItem.status}</span>
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">{caseItem.nextHearing || '-'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        <Link href={`/dashboard/cases/${caseItem.id}`}> 
+                          <Button size="sm" variant="outline">View Details</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-gray-400">No recent cases found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="relative overflow-hidden rounded-lg border bg-background p-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -396,110 +467,122 @@ function LawyerDashboard({ data }) {
   )
 }
 
+
 function ClientDashboard({ data }) {
-  const { summary, recentCases, upcomingEvents } = data || {}
+  const { summary, recentCases, upcomingEvents } = data || {};
+
+  // Stat values (dynamic, fallback to 0)
+  const totalCases = summary?.activeCases || 0;
+  const pendingTasks = summary?.urgentCases || 0;
+  const activeAdvocates = summary?.activeAdvocates || 0;
+
+  // Bar chart data (same as lawyer)
+  const barChartData = [
+    { name: 'Open', value: summary?.activeCases || 0 },
+    { name: 'Closed', value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
+    { name: 'Pending', value: summary?.urgentCases || 0 }
+  ];
 
   return (
     <>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <FileTextIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">My Cases</p>
-                <h3 className="text-2xl font-bold">{summary?.activeCases || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stat Boxes */}
+      <DashboardStats
+        totalCases={totalCases}
+        pendingTasks={pendingTasks}
+        activeThirdParty={activeAdvocates}
+        activeLabel="Active Advocates"
+        totalCasesDesc="Managed across all advocates"
+        pendingTasksDesc="Requires immediate attention"
+        activeThirdPartyDesc="Currently engaged advocates"
+      />
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <CalendarIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Upcoming Hearings</p>
-                <h3 className="text-2xl font-bold">{summary?.upcomingHearings || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="bg-primary/10 p-3 rounded-full">
-                <FolderOpen className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Documents</p>
-                <h3 className="text-2xl font-bold">{summary?.documents || 0}</h3>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+      {/* Bar Chart & Upcoming Events Section (same as lawyer) */}
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        {/* Bar Chart Section */}
+        <Card className="shadow-md">
           <CardHeader>
-            <CardTitle>My Cases</CardTitle>
-            <CardDescription>Your active legal cases</CardDescription>
+            <CardTitle>Case Statistics</CardTitle>
+            <CardDescription>Open, Closed, and Pending Cases</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentCases?.length > 0 ? (
-                Array.from(new Map(recentCases.map(c => [c.caseNumber || c.id, c])).values()).map((caseItem, index) => (
-                  <div key={caseItem.id || caseItem.caseNumber || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-muted/50 p-2 rounded-md">
-                    <div>
-                      <p className="font-medium">{caseItem.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {caseItem.type} • {caseItem.court}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs text-muted-foreground">Next Hearing</p>
-                      <p className="text-sm font-medium">{caseItem.nextHearing || "N/A"}</p>
-                      <Link href={`/dashboard/cases/${caseItem.id}`}>
-                        <Button size="sm" variant="outline">View</Button>
-                      </Link>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6">
-                  <FileTextIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No cases yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Your lawyer will add cases for you</p>
-                </div>
-              )}
+            <div className="bg-card p-2 rounded-lg">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart
+                  data={barChartData}
+                  layout="vertical"
+                  margin={{ left: 32, right: 32, top: 16, bottom: 16 }}
+                  barCategoryGap={32}
+                >
+                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e5e5" />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    tickLine={false}
+                    axisLine={false}
+                    tick={{ fill: "#222", fontSize: 14, fontWeight: 500 }}
+                    width={90}
+                  />
+                  <XAxis type="number" hide />
+                  <Tooltip
+                    cursor={false}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const color = payload[0].color || '#222';
+                        return (
+                          <div style={{
+                            background: 'rgba(255,255,255,0.92)',
+                            borderRadius: '999px',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                            padding: '8px 18px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            fontWeight: 700,
+                            fontSize: 16,
+                            color: '#111',
+                            border: '1.5px solid #eee',
+                            gap: 8
+                          }}>
+                            <span style={{ fontSize: 22, marginRight: 8, color }}>{'●'}</span>
+                            <span style={{ fontWeight: 700 }}>{payload[0].value} Cases</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar
+                    dataKey="value"
+                    radius={8}
+                    minPointSize={8}
+                    fill="#888"
+                    isAnimationActive={true}
+                    barSize={24}
+                    className="transition-all duration-200 shadow-lg hover:scale-[1.05] hover:fill-gray-600 cursor-pointer"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </CardContent>
         </Card>
-
+        {/* Upcoming Events Section */}
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Your scheduled hearings and meetings</CardDescription>
+            <CardDescription>Key Dates and Meetings on your schedule</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {upcomingEvents?.length > 0 ? (
-                upcomingEvents.map((event, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                upcomingEvents.map((event, idx) => (
+                  <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
                       <p className="font-medium">{event.title}</p>
                       <p className="text-sm text-muted-foreground">{event.case}</p>
                       <p className="text-xs text-muted-foreground">{event.court}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{event.date.split(",")[0]}</p>
-                      <p className="text-sm text-muted-foreground">{event.date.split(",")[1]}</p>
+                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
+                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
                     </div>
                   </div>
                 ))
@@ -514,36 +597,83 @@ function ClientDashboard({ data }) {
         </Card>
       </div>
 
-      <div className="relative overflow-hidden rounded-lg border bg-background p-6">
-        <div className="grid gap-6 md:grid-cols-2">
+      {/* Recent Cases Table */}
+      <Card className="mt-8 shadow-md">
+        <CardHeader>
+          <CardTitle>Recent Cases</CardTitle>
+          <CardDescription>Latest case entries and updates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border rounded-md">
+              <thead>
+                <tr className="border-b">
+                  <th className="px-4 py-2 text-left font-semibold">Case Title</th>
+                  <th className="px-4 py-2 text-left font-semibold">Advocate</th>
+                  <th className="px-4 py-2 text-left font-semibold">Status</th>
+                  <th className="px-4 py-2 text-left font-semibold">Next Hearing</th>
+                  <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentCases?.length > 0 ? (
+                  recentCases.map((caseItem, idx) => (
+                    <tr key={caseItem.id || idx} className="border-b hover:bg-muted/50">
+                      <td className="px-4 py-2">{caseItem.title}</td>
+                      <td className="px-4 py-2">{caseItem.lawyer?.name || '-'}</td>
+                      <td className="px-4 py-2">
+                        <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${caseItem.status === 'active' ? 'bg-gray-200 text-black' : caseItem.status === 'closed' ? 'bg-gray-700 text-white' : 'bg-gray-400 text-white'}`}>{caseItem.status || '-'}</span>
+                      </td>
+                      <td className="px-4 py-2">{caseItem.nextHearingDate || 'N/A'}</td>
+                      <td className="px-4 py-2">
+                        <Link href={`/dashboard/cases/${caseItem.id}`}> 
+                          <Button size="sm" variant="outline">View Details</Button>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="text-center py-6 text-gray-400">No recent cases found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Case Management Tips (now for all users) */}
+      <div className="relative overflow-hidden rounded-lg border bg-background p-6 mt-8">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-4">
-            <h3 className="text-xl font-bold">Understanding Your Legal Process</h3>
-            <p className="text-muted-foreground">
-              Your lawyer is working diligently on your case. Here's what you can expect in the coming weeks:
-            </p>
+            <h3 className="text-xl font-bold">Case Management Tips</h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-start">
-                <div className="mr-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                  1
-                </div>
-                <span>Document review and evidence collection</span>
+                <ClockIcon className="mr-2 h-5 w-5 text-primary" />
+                <span>Schedule regular client updates to maintain communication</span>
               </li>
               <li className="flex items-start">
-                <div className="mr-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                  2
-                </div>
-                <span>Preparation of legal arguments</span>
+                <FileTextIcon className="mr-2 h-5 w-5 text-primary" />
+                <span>Keep case documents organized by type and date</span>
               </li>
               <li className="flex items-start">
-                <div className="mr-2 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs">
-                  3
-                </div>
-                <span>Court hearing and presentation of case</span>
+                <CalendarIcon className="mr-2 h-5 w-5 text-primary" />
+                <span>Set reminders for important deadlines and court dates</span>
               </li>
             </ul>
-            <Button className="mt-2">Learn More</Button>
+            <Button className="mt-2">View All Tips</Button>
           </div>
-          <div className="relative hidden md:block">
+          <div className="relative hidden md:block md:col-span-2 lg:col-span-1">
+            <Image
+              src="/images/law-library.jpg"
+              alt="Legal workspace"
+              width={400}
+              height={300}
+              className="rounded-md object-cover hover:scale-105 transition-transform duration-700"
+            />
+          </div>
+          <div className="relative hidden lg:block">
             <Image
               src="/images/gavel.jpg"
               alt="Scales of justice"
@@ -555,5 +685,114 @@ function ClientDashboard({ data }) {
         </div>
       </div>
     </>
-  )
+  );
+
+      {/* Lower Section: Bar Chart & Events */}
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        {/* Bar Chart Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Case Statistics</CardTitle>
+            <CardDescription>Breakdown of cases by status</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <BarChart3Icon className="h-8 w-8 mb-2 text-primary" />
+            <div className="w-full h-64 flex items-center justify-center">
+              {/* Replace with shadcn/ui chart if available, else fallback */}
+              {barChartData.every(item => item.value === 0) ? (
+                <div className="text-muted-foreground text-center w-full">No case statistics available</div>
+              ) : (
+                <div className="w-full">
+                  {/* Example bar chart, replace with actual chart component */}
+                  {barChartData.map((item, idx) => (
+                    <div key={item.label} className="flex items-center mb-3">
+                      <span className="w-32 text-sm">{item.label}</span>
+                      <div className="flex-1 h-4 bg-muted rounded mx-2">
+                        <div style={{ width: `${Math.min(item.value * 10, 100)}%` }} className="h-4 bg-primary rounded" />
+                      </div>
+                      <span className="w-8 text-right">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Upcoming Events Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Upcoming Events</CardTitle>
+            <CardDescription>Key Dates and Meetings on your schedule</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {upcomingEvents?.length > 0 ? (
+                upcomingEvents.map((event, idx) => (
+                  <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                    <div>
+                      <p className="font-medium">{event.title}</p>
+                      <p className="text-sm text-muted-foreground">{event.case}</p>
+                      <p className="text-xs text-muted-foreground">{event.court}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
+                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-6">
+                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">No upcoming events</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Cases Table */}
+      <div className="mt-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Cases</CardTitle>
+            <CardDescription>Latest case entries and updates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm border rounded-md">
+                <thead>
+                  <tr className="border-b">
+                    <th className="px-4 py-2 text-left font-semibold">Case Title</th>
+                    <th className="px-4 py-2 text-left font-semibold">Advocate</th>
+                    <th className="px-4 py-2 text-left font-semibold">Status</th>
+                    <th className="px-4 py-2 text-left font-semibold">Next Hearing</th>
+                    <th className="px-4 py-2 text-left font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentCases?.length > 0 ? (
+                    recentCases.map((caseItem, idx) => (
+                      <tr key={caseItem.id || idx} className="border-b hover:bg-muted/50">
+                        <td className="px-4 py-2">{caseItem.title}</td>
+                        <td className="px-4 py-2">{caseItem.lawyerName || '-'}</td>
+                        <td className="px-4 py-2">{caseItem.status || '-'}</td>
+                        <td className="px-4 py-2">{caseItem.nextHearing || 'N/A'}</td>
+                        <td className="px-4 py-2">
+                          <Link href={`/dashboard/cases/${caseItem.id}`}><Button size="sm" variant="outline">View Details</Button></Link>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="text-center py-6 text-muted-foreground">No recent cases found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+  ;
 }

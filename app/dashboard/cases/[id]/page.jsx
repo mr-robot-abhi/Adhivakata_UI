@@ -300,111 +300,339 @@ export default function CaseDetailsPage() {
                   <CardDescription>Key individuals and parties associated with the case.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Primary Lawyer Display */}
-                  {caseData.lawyer && (
-                    <div className="mb-4 pb-4 border-b">
-                      <h3 className="text-md font-semibold mb-2 text-gray-700">Primary Lawyer</h3>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="flex items-center text-sm"><User className="mr-2 h-4 w-4 text-gray-500" /> <strong>{caseData.lawyer.name}</strong></p>
-                        {caseData.lawyer.email && <p className="text-xs text-gray-500 ml-6">{caseData.lawyer.email}</p>}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Primary Client Display */}
-                  {caseData.client && (
-                    <div className="mb-4 pb-4 border-b">
-                      <h3 className="text-md font-semibold mb-2 text-gray-700">Primary Client</h3>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <p className="flex items-center text-sm"><User className="mr-2 h-4 w-4 text-gray-500" /> <strong>{caseData.client.name}</strong></p>
-                        {caseData.client.email && <p className="text-xs text-gray-500 ml-6">{caseData.client.email}</p>}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Conditionally display Clients list for Lawyers */}
-                  {isLawyer && caseData.clients.length > 0 && (
-                    <>
-                      {console.log('Render (clients list) - caseData.clients:', caseData.clients)} {/* NEW DEBUG LOG */}
-                    <div className="mb-4 pb-4 border-b">
-                      <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
-                      {caseData.clients.map((client, index) => (
-                        <div key={client._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
-                          <p className="font-medium text-sm">{client.name}</p>
-                          {client.email && <p className="text-sm text-gray-500">Email: {client.email}</p>}
-                          {client.contact && <p className="text-sm text-gray-500">Contact: {client.contact}</p>}
-                          {client.address && <p className="text-sm text-gray-500">Address: {client.address}</p>}
+                  {/* Lawyers Section */}
+                  <div className="mb-4 pb-4 border-b">
+                    <h3 className="text-md font-semibold mb-3 text-gray-700">Legal Team</h3>
+                    
+                    {/* Primary Lawyer */}
+                    {caseData.lawyer && (
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                        <div className="flex justify-between items-start">
+                          <div className="w-full">
+                            <div className="flex items-center flex-wrap gap-2 mb-2">
+                              <User className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
+                              <p className="font-medium text-blue-800">{caseData.lawyer.name}</p>
+                              <Badge className="bg-blue-600 text-white text-xs">Primary Lawyer</Badge>
+                              
+                              {/* Show role if available */}
+                              {caseData.lawyer.role && (
+                                <Badge variant="outline" className="text-xs border-blue-200 text-blue-700">
+                                  {caseData.lawyer.role.charAt(0).toUpperCase() + caseData.lawyer.role.slice(1)}
+                                </Badge>
+                              )}
+                              
+                              {/* Show level if available */}
+                              {caseData.lawyer.level && (
+                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                  {caseData.lawyer.level}
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="ml-5 space-y-1.5">
+                              {caseData.lawyer.email && (
+                                <p className="text-sm text-gray-700 flex items-start">
+                                  <span className="w-16 text-gray-500">Email:</span>
+                                  <span className="flex-1">{caseData.lawyer.email}</span>
+                                </p>
+                              )}
+                              {caseData.lawyer.contact && (
+                                <p className="text-sm text-gray-700 flex items-start">
+                                  <span className="w-16 text-gray-500">Contact:</span>
+                                  <span className="flex-1">{caseData.lawyer.contact}</span>
+                                </p>
+                              )}
+                              {caseData.lawyer.company && (
+                                <p className="text-sm text-gray-700 flex items-start">
+                                  <span className="w-16 text-gray-500">Firm:</span>
+                                  <span className="flex-1">{caseData.lawyer.company}</span>
+                                </p>
+                              )}
+                              {caseData.lawyer.gst && (
+                                <p className="text-sm text-gray-700 flex items-start">
+                                  <span className="w-16 text-gray-500">GST:</span>
+                                  <span className="flex-1">{caseData.lawyer.gst}</span>
+                                </p>
+                              )}
+                              {caseData.lawyer.chairPosition && caseData.lawyer.chairPosition !== 'other' && (
+                                <p className="text-sm text-gray-700 flex items-start">
+                                  <span className="w-16 text-gray-500">Position:</span>
+                                  <span className="flex-1 capitalize">
+                                    {caseData.lawyer.chairPosition.replace('_', ' ')}
+                                  </span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    </>
-                  )}
-                  {isLawyer && caseData.clients.length === 0 && (
-                     <div className="mb-4 pb-4 border-b">
-                        <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Clients</h3>
-                        <p className="text-sm text-muted-foreground">No additional clients associated by you.</p>
-                     </div>
-                  )}
+                      </div>
+                    )}
 
-                  {/* Conditionally display Advocates list for Clients */}
-                  {!isLawyer && caseData.advocates.length > 0 && (
-                    <div className="mb-4 pb-4 border-b">
-                      <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Advocates</h3>
-                      {caseData.advocates.map((advocate, index) => (
-                        <div key={advocate._id || index} className="p-3 border rounded-lg mb-2 bg-white shadow-sm">
-                          <p className="font-medium text-sm">{advocate.name} {advocate.isLead && <Badge variant="secondary" size="sm" className="ml-2">Lead</Badge>}</p>
-                          {advocate.email && <p className="text-sm text-gray-500">Email: {advocate.email}</p>}
-                          {advocate.contact && <p className="text-sm text-gray-500">Contact: {advocate.contact}</p>}
-                          {advocate.company && <p className="text-sm text-gray-500">Company: {advocate.company}</p>}
-                          {advocate.gst && <p className="text-sm text-gray-500">GST: {advocate.gst}</p>}
-                          {advocate.level && <p className="text-sm text-gray-500">Level: {advocate.level}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {!isLawyer && caseData.advocates.length === 0 && (
-                    <div className="mb-4 pb-4 border-b">
-                        <h3 className="text-md font-semibold mb-2 text-gray-700">Associated Advocates</h3>
-                        <p className="text-sm text-muted-foreground">No additional advocates associated by you.</p>
-                    </div>
-                  )}
-
-                  {/* Parties to the Case (Petitioners/Respondents) */}
-                  {caseData.parties && (caseData.parties.petitioner?.length > 0 || caseData.parties.respondent?.length > 0) && (
-                    <div>
-                      <h3 className="text-md font-semibold mb-2 text-gray-700">Other Parties to the Case</h3>
-                      {caseData.parties.petitioner.length > 0 && (
-                        <div className="mb-3">
-                          <h4 className="text-sm font-medium mb-1 text-gray-600">Petitioners/Appellants</h4>
-                          {caseData.parties.petitioner.map((p, i) => (
-                            <div key={`petitioner-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-sm">
-                              <p><strong>Name:</strong> {p.name}</p>
-                              {p.role && <p><strong>Role:</strong> {p.role}</p>}
-                              {p.type && <p><strong>Type:</strong> {p.type}</p>}
+                    {/* Additional Lawyers */}
+                    {caseData.lawyers && caseData.lawyers.length > 0 && (
+                      <div className="space-y-3 mt-4">
+                        {caseData.lawyers
+                          .filter(lawyer => !lawyer.isPrimary)
+                          .map((lawyer, index) => (
+                            <div key={`lawyer-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center flex-wrap gap-2">
+                                      <User className="h-4 w-4 text-gray-500 mr-1 flex-shrink-0" />
+                                      <p className="font-medium text-sm">{lawyer.name}</p>
+                                      
+                                      {/* Role Badge */}
+                                      {lawyer.role && (
+                                        <Badge variant="outline" className="text-xs">
+                                          {lawyer.role.charAt(0).toUpperCase() + lawyer.role.slice(1)}
+                                        </Badge>
+                                      )}
+                                      
+                                      {/* Level Badge */}
+                                      {lawyer.level && (
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                          {lawyer.level}
+                                        </Badge>
+                                      )}
+                                      
+                                      {/* Position Badge */}
+                                      {lawyer.chairPosition && lawyer.chairPosition !== 'other' && (
+                                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                          {lawyer.chairPosition.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                        </Badge>
+                                      )}
+                                      
+                                      {/* Primary Badge */}
+                                      {lawyer.isPrimary && (
+                                        <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                          Primary
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    
+                                    <div className="ml-5 mt-2 space-y-1.5">
+                                      {lawyer.email && (
+                                        <p className="text-sm text-gray-600 flex items-start">
+                                          <span className="w-16 text-gray-500 text-sm">Email:</span>
+                                          <span className="flex-1">{lawyer.email}</span>
+                                        </p>
+                                      )}
+                                      {lawyer.contact && (
+                                        <p className="text-sm text-gray-600 flex items-start">
+                                          <span className="w-16 text-gray-500 text-sm">Contact:</span>
+                                          <span className="flex-1">{lawyer.contact}</span>
+                                        </p>
+                                      )}
+                                      {lawyer.company && (
+                                        <p className="text-sm text-gray-600 flex items-start">
+                                          <span className="w-16 text-gray-500 text-sm">Firm:</span>
+                                          <span className="flex-1">{lawyer.company}</span>
+                                        </p>
+                                      )}
+                                      {lawyer.gst && (
+                                        <p className="text-sm text-gray-600 flex items-start">
+                                          <span className="w-16 text-gray-500 text-sm">GST:</span>
+                                          <span className="flex-1">{lawyer.gst}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           ))}
+                      </div>
+                    )}
+
+                    {(!caseData.lawyers || caseData.lawyers.length === 0) && (
+                      <p className="text-sm text-muted-foreground">No additional lawyers have been added to this case.</p>
+                    )}
+                  </div>
+
+                  {/* Clients Section */}
+                  <div className="mb-4 pb-4 border-b">
+                    <h3 className="text-md font-semibold mb-3 text-gray-700">Clients</h3>
+                    
+                    {/* Primary Client */}
+                    {caseData.client && (
+                      <div className="mb-4 p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 text-green-600 mr-2" />
+                              <p className="font-medium">{caseData.client.name}</p>
+                              <Badge variant="default" className="ml-2 bg-green-600">Primary</Badge>
+                            </div>
+                            {caseData.client.email && (
+                              <p className="text-sm text-gray-600 ml-6 mt-1">{caseData.client.email}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Clients */}
+                    {caseData.clients && caseData.clients.length > 0 && (
+                      <div className="space-y-3 mt-4">
+                        {caseData.clients.map((client, index) => (
+                          <div key={`client-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
+                            <p className="font-medium text-sm flex items-center">
+                              <User className="h-4 w-4 text-gray-500 mr-2" />
+                              {client.name}
+                            </p>
+                            <div className="ml-6 mt-1 space-y-1">
+                              {client.email && (
+                                <p className="text-xs text-gray-600 flex items-center">
+                                  <span className="w-16 text-gray-500">Email:</span>
+                                  {client.email}
+                                </p>
+                              )}
+                              {client.contact && (
+                                <p className="text-xs text-gray-600 flex items-center">
+                                  <span className="w-16 text-gray-500">Contact:</span>
+                                  {client.contact}
+                                </p>
+                              )}
+                              {client.address && (
+                                <p className="text-xs text-gray-600 flex items-center">
+                                  <span className="w-16 text-gray-500">Address:</span>
+                                  <span className="flex-1">{client.address}</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {(!caseData.clients || caseData.clients.length === 0) && (
+                      <p className="text-sm text-muted-foreground">No additional clients have been added to this case.</p>
+                    )}
+                  </div>
+
+                  {/* Parties Section */}
+                  {(caseData.parties?.petitioner?.length > 0 || caseData.parties?.respondent?.length > 0) && (
+                    <div className="mb-6">
+                      <h3 className="text-md font-semibold mb-3 text-gray-700">Case Parties</h3>
+                      
+                      {/* Petitioners */}
+                      {caseData.parties.petitioner?.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium mb-2 text-gray-600">Petitioners</h4>
+                          <div className="space-y-2">
+                            {caseData.parties.petitioner.map((party, index) => (
+                              <div key={`petitioner-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <User className="h-4 w-4 text-purple-600" />
+                                      <p className="font-medium text-sm">{party.name}</p>
+                                      <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                        {party.role}
+                                      </Badge>
+                                    </div>
+                                    <div className="ml-6 space-y-1">
+                                      <p className="text-xs text-gray-600">Type: {party.type}</p>
+                                      {party.email && (
+                                        <p className="text-xs text-gray-600">Email: {party.email}</p>
+                                      )}
+                                      {party.contact && (
+                                        <p className="text-xs text-gray-600">Contact: {party.contact}</p>
+                                      )}
+                                      {party.address && (
+                                        <p className="text-xs text-gray-600">Address: {party.address}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
-                      {caseData.parties.respondent.length > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-1 text-gray-600">Respondents/Defendants</h4>
-                          {caseData.parties.respondent.map((r, i) => (
-                            <div key={`respondent-${i}`} className="p-2 border rounded-md mb-1 bg-gray-50 text-sm">
-                              <p><strong>Name:</strong> {r.name}</p>
-                              {r.role && <p><strong>Role:</strong> {r.role}</p>}
-                              {r.type && <p><strong>Type:</strong> {r.type}</p>}
-                            </div>
-                          ))}
+
+                      {/* Respondents */}
+                      {caseData.parties.respondent?.length > 0 && (
+                        <div className="mb-4">
+                          <h4 className="text-sm font-medium mb-2 text-gray-600">Respondents</h4>
+                          <div className="space-y-2">
+                            {caseData.parties.respondent.map((party, index) => (
+                              <div key={`respondent-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <User className="h-4 w-4 text-red-600" />
+                                      <p className="font-medium text-sm">{party.name}</p>
+                                      <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                        {party.role}
+                                      </Badge>
+                                    </div>
+                                    <div className="ml-6 space-y-1">
+                                      <p className="text-xs text-gray-600">Type: {party.type}</p>
+                                      {party.email && (
+                                        <p className="text-xs text-gray-600">Email: {party.email}</p>
+                                      )}
+                                      {party.contact && (
+                                        <p className="text-xs text-gray-600">Contact: {party.contact}</p>
+                                      )}
+                                      {party.address && (
+                                        <p className="text-xs text-gray-600">Address: {party.address}</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
                   )}
-                  { /* Fallback if no people or parties at all */}
-                  { !caseData.lawyer && !caseData.client && 
-                    caseData.clients.length === 0 && 
-                    caseData.advocates.length === 0 && 
-                    (caseData.parties.petitioner.length === 0 && caseData.parties.respondent.length === 0) && (
-                      <p className="text-sm text-muted-foreground text-center py-4">No people or party information available for this case.</p>
+
+                  {/* Stakeholders Section */}
+                  <div className="mt-6">
+                    <h3 className="text-md font-semibold mb-3 text-gray-700">Stakeholders</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Witnesses */}
+                      <div className="p-4 border rounded-lg bg-amber-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-amber-600" />
+                          <h4 className="font-medium">Witnesses</h4>
+                        </div>
+                        <p className="text-sm text-gray-600">No witnesses added yet.</p>
+                      </div>
+
+                      {/* Experts */}
+                      <div className="p-4 border rounded-lg bg-green-50">
+                        <div className="flex items-center gap-2 mb-2">
+                          <User className="h-4 w-4 text-green-600" />
+                          <h4 className="font-medium">Expert Consultants</h4>
+                        </div>
+                        <p className="text-sm text-gray-600">No experts added yet.</p>
+                      </div>
+
+                      {/* Other Stakeholders */}
+                      <div className="p-4 border rounded-lg bg-blue-50 md:col-span-2">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-4 w-4 text-blue-600" />
+                          <h4 className="font-medium">Other Stakeholders</h4>
+                        </div>
+                        <p className="text-sm text-gray-600">No other stakeholders added yet.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fallback if no people or parties at all */}
+                  {!caseData.lawyer && !caseData.client && 
+                    (!caseData.clients || caseData.clients.length === 0) && 
+                    (!caseData.advocates || caseData.advocates.length === 0) && 
+                    (!caseData.parties || 
+                      (caseData.parties.petitioner?.length === 0 && 
+                       caseData.parties.respondent?.length === 0)) && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No people or party information available for this case.
+                    </p>
                   )}
                 </CardContent>
               </Card>
