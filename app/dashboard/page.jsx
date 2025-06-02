@@ -237,6 +237,7 @@ function NewUserDashboard({ isLawyer, user }) {
 }
 
 import DashboardStats from "@/components/dashboard/DashboardStats";
+import CaseStatisticsChart from "@/components/dashboard/CaseStatisticsChart";
 
 function LawyerDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {}
@@ -275,68 +276,13 @@ function LawyerDashboard({ data }) {
             <CardDescription>Open, Closed, and Pending Cases</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* --- RECHARTS-ONLY BAR CHART --- */}
-            <div className="bg-card p-2 rounded-lg">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart
-                  data={[
-                    { name: "Open", value: summary?.activeCases || 0 },
-                    { name: "Closed", value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
-                    { name: "Pending", value: summary?.urgentCases || 0 }
-                  ]}
-                  layout="vertical"
-                  margin={{ left: 32, right: 32, top: 16, bottom: 16 }}
-                  barCategoryGap={32}
-                >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e5e5" />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "#222", fontSize: 14, fontWeight: 500 }}
-                    width={90}
-                  />
-                  <XAxis type="number" hide />
-                  <Tooltip
-                    cursor={false}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const color = payload[0].color || '#222';
-                        return (
-                          <div style={{
-                            background: 'rgba(255,255,255,0.92)',
-                            borderRadius: '999px',
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-                            padding: '8px 18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontWeight: 700,
-                            fontSize: 16,
-                            color: '#111',
-                            border: '1.5px solid #eee',
-                            gap: 8
-                          }}>
-                            <span style={{ fontSize: 22, marginRight: 8, color }}>{'●'}</span>
-                            <span style={{ fontWeight: 700 }}>{payload[0].value} Cases</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    radius={8}
-                    minPointSize={8}
-                    fill="#888"
-                    isAnimationActive={true}
-                    barSize={24}
-                    className="transition-all duration-200 shadow-lg hover:scale-[1.05] hover:fill-gray-600 cursor-pointer"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <CaseStatisticsChart 
+              data={[
+                { name: "Open", value: summary?.activeCases || 0 },
+                { name: "Closed", value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
+                { name: "Pending", value: summary?.urgentCases || 0 }
+              ]} 
+            />
           </CardContent>
         </Card>
         {/* Upcoming Hearings Section */}
@@ -400,11 +346,25 @@ function LawyerDashboard({ data }) {
                   recentCases.map((caseItem, idx) => (
                     <tr key={caseItem.id || caseItem.caseNumber || idx} className="hover:bg-gray-100 transition">
                       <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">{caseItem.title}</td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">{caseItem.advocateName || '-'}</td>
-                      <td className="px-4 py-2 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${caseItem.status === 'Open' ? 'bg-gray-200 text-black' : caseItem.status === 'Closed' ? 'bg-gray-700 text-white' : 'bg-gray-400 text-white'}`}>{caseItem.status}</span>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">
+                        {caseItem.lawyer?.name || caseItem.advocateName || '-'}
                       </td>
-                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">{caseItem.nextHearing || '-'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap">
+                        {caseItem.status && (
+                          <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${
+                            caseItem.status.toLowerCase() === 'open' || caseItem.status === 'active' 
+                              ? 'bg-gray-200 text-black' 
+                              : caseItem.status.toLowerCase() === 'closed' 
+                                ? 'bg-gray-700 text-white' 
+                                : 'bg-gray-400 text-white'
+                          }`}>
+                            {caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 whitespace-nowrap text-gray-700">
+                        {caseItem.nextHearingDate || caseItem.nextHearing || 'N/A'}
+                      </td>
                       <td className="px-4 py-2 whitespace-nowrap">
                         <Link href={`/dashboard/cases/${caseItem.id}`}> 
                           <Button size="sm" variant="outline">View Details</Button>
@@ -505,63 +465,7 @@ function ClientDashboard({ data }) {
             <CardDescription>Open, Closed, and Pending Cases</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-card p-2 rounded-lg">
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart
-                  data={barChartData}
-                  layout="vertical"
-                  margin={{ left: 32, right: 32, top: 16, bottom: 16 }}
-                  barCategoryGap={32}
-                >
-                  <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="#e5e5e5" />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tickLine={false}
-                    axisLine={false}
-                    tick={{ fill: "#222", fontSize: 14, fontWeight: 500 }}
-                    width={90}
-                  />
-                  <XAxis type="number" hide />
-                  <Tooltip
-                    cursor={false}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const color = payload[0].color || '#222';
-                        return (
-                          <div style={{
-                            background: 'rgba(255,255,255,0.92)',
-                            borderRadius: '999px',
-                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-                            padding: '8px 18px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            fontWeight: 700,
-                            fontSize: 16,
-                            color: '#111',
-                            border: '1.5px solid #eee',
-                            gap: 8
-                          }}>
-                            <span style={{ fontSize: 22, marginRight: 8, color }}>{'●'}</span>
-                            <span style={{ fontWeight: 700 }}>{payload[0].value} Cases</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar
-                    dataKey="value"
-                    radius={8}
-                    minPointSize={8}
-                    fill="#888"
-                    isAnimationActive={true}
-                    barSize={24}
-                    className="transition-all duration-200 shadow-lg hover:scale-[1.05] hover:fill-gray-600 cursor-pointer"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <CaseStatisticsChart data={barChartData} />
           </CardContent>
         </Card>
         {/* Upcoming Events Section */}
@@ -620,11 +524,25 @@ function ClientDashboard({ data }) {
                   recentCases.map((caseItem, idx) => (
                     <tr key={caseItem.id || idx} className="border-b hover:bg-muted/50">
                       <td className="px-4 py-2">{caseItem.title}</td>
-                      <td className="px-4 py-2">{caseItem.lawyer?.name || '-'}</td>
                       <td className="px-4 py-2">
-                        <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${caseItem.status === 'active' ? 'bg-gray-200 text-black' : caseItem.status === 'closed' ? 'bg-gray-700 text-white' : 'bg-gray-400 text-white'}`}>{caseItem.status || '-'}</span>
+                        {caseItem.lawyer?.name || caseItem.advocateName || '-'}
                       </td>
-                      <td className="px-4 py-2">{caseItem.nextHearingDate || 'N/A'}</td>
+                      <td className="px-4 py-2">
+                        {caseItem.status && (
+                          <span className={`inline-flex px-2 py-1 rounded text-xs font-semibold ${
+                            caseItem.status.toLowerCase() === 'open' || caseItem.status === 'active' 
+                              ? 'bg-gray-200 text-black' 
+                              : caseItem.status.toLowerCase() === 'closed' 
+                                ? 'bg-gray-700 text-white' 
+                                : 'bg-gray-400 text-white'
+                          }`}>
+                            {caseItem.status.charAt(0).toUpperCase() + caseItem.status.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {caseItem.nextHearingDate || caseItem.nextHearing || 'N/A'}
+                      </td>
                       <td className="px-4 py-2">
                         <Link href={`/dashboard/cases/${caseItem.id}`}> 
                           <Button size="sm" variant="outline">View Details</Button>
@@ -774,10 +692,33 @@ function ClientDashboard({ data }) {
                   {recentCases?.length > 0 ? (
                     recentCases.map((caseItem, idx) => (
                       <tr key={caseItem.id || idx} className="border-b hover:bg-muted/50">
-                        <td className="px-4 py-2">{caseItem.title}</td>
-                        <td className="px-4 py-2">{caseItem.lawyerName || '-'}</td>
-                        <td className="px-4 py-2">{caseItem.status || '-'}</td>
-                        <td className="px-4 py-2">{caseItem.nextHearing || 'N/A'}</td>
+                        <td className="px-4 py-2">
+                          <Link href={`/dashboard/cases/${caseItem.id}`} className="text-primary hover:underline">
+                            {caseItem.title}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2">
+                          {caseItem.leadAdvocate?.name || 
+                           caseItem.advocates?.[0]?.name || 
+                           caseItem.lawyer?.name || 
+                           '-'}
+                        </td>
+                        <td className="px-4 py-2">
+                          <Badge 
+                            variant={caseItem.status === 'Active' ? 'default' : 'outline'}
+                            className={caseItem.status === 'Active' ? 'bg-green-100 text-green-800' : 'text-gray-600'}
+                          >
+                            {caseItem.status || 'Pending'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-2">
+                          {caseItem.nextHearingDate ? (
+                            <div className="flex items-center gap-1">
+                              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                              <span>{new Date(caseItem.nextHearingDate).toLocaleDateString()}</span>
+                            </div>
+                          ) : 'N/A'}
+                        </td>
                         <td className="px-4 py-2">
                           <Link href={`/dashboard/cases/${caseItem.id}`}><Button size="sm" variant="outline">View Details</Button></Link>
                         </td>

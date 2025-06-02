@@ -304,69 +304,132 @@ export default function CaseDetailsPage() {
                   <div className="mb-4 pb-4 border-b">
                     <h3 className="text-md font-semibold mb-3 text-gray-700">Legal Team</h3>
                     
-                    {/* Primary Lawyer */}
-                    {caseData.lawyer && (
-                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                        <div className="flex justify-between items-start">
-                          <div className="w-full">
-                            <div className="flex items-center flex-wrap gap-2 mb-2">
-                              <User className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
-                              <p className="font-medium text-blue-800">{caseData.lawyer.name}</p>
-                              <Badge className="bg-blue-600 text-white text-xs">Primary Lawyer</Badge>
-                              
-                              {/* Show role if available */}
-                              {caseData.lawyer.role && (
-                                <Badge variant="outline" className="text-xs border-blue-200 text-blue-700">
-                                  {caseData.lawyer.role.charAt(0).toUpperCase() + caseData.lawyer.role.slice(1)}
-                                </Badge>
-                              )}
-                              
-                              {/* Show level if available */}
-                              {caseData.lawyer.level && (
-                                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                  {caseData.lawyer.level}
-                                </Badge>
-                              )}
+                    {/* Lead Advocate - Show the lead advocate if available */}
+                    {caseData.advocates?.length > 0 ? (
+                      <div className="space-y-4">
+                        {caseData.advocates
+                          .filter(adv => adv.isLead)
+                          .map((advocate, idx) => (
+                            <div key={`lead-advocate-${idx}`} className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                              <div className="flex justify-between items-start">
+                                <div className="w-full">
+                                  <div className="flex items-center flex-wrap gap-2 mb-2">
+                                    <User className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
+                                    <p className="font-medium text-blue-800">
+                                      {advocate.name || 'Lead Advocate'}
+                                    </p>
+                                    <Badge className="bg-blue-600 text-white text-xs">
+                                      Lead Advocate
+                                    </Badge>
+                                    {advocate.level && (
+                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                        {advocate.level}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="ml-5 space-y-1.5">
+                                    {advocate.email && (
+                                      <p className="text-sm text-gray-700 flex items-start">
+                                        <span className="w-16 text-gray-500">Email:</span>
+                                        <span className="flex-1">{advocate.email}</span>
+                                      </p>
+                                    )}
+                                    {advocate.contact && (
+                                      <p className="text-sm text-gray-700 flex items-start">
+                                        <span className="w-16 text-gray-500">Contact:</span>
+                                        <span className="flex-1">{advocate.contact}</span>
+                                      </p>
+                                    )}
+                                    {advocate.company && (
+                                      <p className="text-sm text-gray-700 flex items-start">
+                                        <span className="w-16 text-gray-500">Firm:</span>
+                                        <span className="flex-1">{advocate.company}</span>
+                                      </p>
+                                    )}
+                                    {advocate.gst && (
+                                      <p className="text-sm text-gray-700 flex items-start">
+                                        <span className="w-16 text-gray-500">GST:</span>
+                                        <span className="flex-1">{advocate.gst}</span>
+                                      </p>
+                                    )}
+                                    {advocate.chairPosition && (
+                                      <p className="text-sm text-gray-700 flex items-start">
+                                        <span className="w-16 text-gray-500">Position:</span>
+                                        <span className="flex-1 capitalize">
+                                          {advocate.chairPosition
+                                            .replace(/_/g, ' ')
+                                            .split(' ')
+                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                            .join(' ')}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
                             </div>
-                            
-                            <div className="ml-5 space-y-1.5">
-                              {caseData.lawyer.email && (
-                                <p className="text-sm text-gray-700 flex items-start">
-                                  <span className="w-16 text-gray-500">Email:</span>
-                                  <span className="flex-1">{caseData.lawyer.email}</span>
-                                </p>
-                              )}
-                              {caseData.lawyer.contact && (
-                                <p className="text-sm text-gray-700 flex items-start">
-                                  <span className="w-16 text-gray-500">Contact:</span>
-                                  <span className="flex-1">{caseData.lawyer.contact}</span>
-                                </p>
-                              )}
-                              {caseData.lawyer.company && (
-                                <p className="text-sm text-gray-700 flex items-start">
-                                  <span className="w-16 text-gray-500">Firm:</span>
-                                  <span className="flex-1">{caseData.lawyer.company}</span>
-                                </p>
-                              )}
-                              {caseData.lawyer.gst && (
-                                <p className="text-sm text-gray-700 flex items-start">
-                                  <span className="w-16 text-gray-500">GST:</span>
-                                  <span className="flex-1">{caseData.lawyer.gst}</span>
-                                </p>
-                              )}
-                              {caseData.lawyer.chairPosition && caseData.lawyer.chairPosition !== 'other' && (
-                                <p className="text-sm text-gray-700 flex items-start">
-                                  <span className="w-16 text-gray-500">Position:</span>
-                                  <span className="flex-1 capitalize">
-                                    {caseData.lawyer.chairPosition.replace('_', ' ')}
-                                  </span>
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">
+                        No advocate information available
                       </div>
                     )}
+
+                    {/* Additional Advocates */}
+                    {caseData.advocates?.filter(a => !a.isLead).length > 0 ? (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-medium mb-3 text-gray-700">Additional Advocates</h4>
+                        <div className="space-y-3">
+                          {caseData.advocates
+                            .filter(a => !a.isLead)
+                            .map((advocate, index) => (
+                              <div key={`advocate-${index}`} className="p-4 border rounded-lg bg-white shadow-sm hover:shadow transition-shadow">
+                                <div className="flex justify-between items-start">
+                                  <div className="w-full">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <User className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                      <p className="font-medium text-gray-800">{advocate.name}</p>
+                                      {advocate.level && (
+                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                          {advocate.level}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="ml-6 space-y-1.5">
+                                      {advocate.email && (
+                                        <p className="text-sm text-gray-700 flex items-start">
+                                          <span className="w-16 text-gray-500">Email:</span>
+                                          <span className="flex-1">{advocate.email}</span>
+                                        </p>
+                                      )}
+                                      {advocate.contact && (
+                                        <p className="text-sm text-gray-700 flex items-start">
+                                          <span className="w-16 text-gray-500">Contact:</span>
+                                          <span className="flex-1">{advocate.contact}</span>
+                                        </p>
+                                      )}
+                                      {advocate.company && (
+                                        <p className="text-sm text-gray-700 flex items-start">
+                                          <span className="w-16 text-gray-500">Firm:</span>
+                                          <span className="flex-1">{advocate.company}</span>
+                                        </p>
+                                      )}
+                                      {advocate.gst && (
+                                        <p className="text-sm text-gray-700 flex items-start">
+                                          <span className="w-16 text-gray-500">GST:</span>
+                                          <span className="flex-1">{advocate.gst}</span>
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    ) : null}
 
                     {/* Additional Lawyers */}
                     {caseData.lawyers && caseData.lawyers.length > 0 && (

@@ -152,7 +152,7 @@ export default function Home() {
         <section ref={heroRef} className="relative w-full pt-24 pb-32 overflow-hidden bg-gray-50">
           <div className="absolute inset-0 z-0">
             <Image
-              src="/images/bg_1.jpg"
+              src="/images/bg_5.png"
               alt="Legal background"
               fill
               className="object-cover object-center filter grayscale"
@@ -279,40 +279,40 @@ export default function Home() {
                   description:
                     "Effortlessly organize and track cases with customizable workflows and real-time updates.",
                   icon: <Scale className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_1.jpg",
+                  image: "/images/bg_4.png",
                 },
                 {
                   title: "Document Management",
                   description:
                     "Securely store, categorize, and access all case-related documents in a centralized hub.",
                   icon: <BookOpen className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_2.jpg",
+                  image: "/images/bg_5.png",
                 },
                 {
                   title: "Client Portal",
                   description:
                     "Provide clients with a secure, user-friendly portal for case updates and document sharing.",
                   icon: <Users className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_3.jpg",
+                  image: "/images/bg_6.png",
                 },
                 {
                   title: "Calendar & Deadlines",
                   description: "Stay ahead with integrated calendars and automated deadline reminders.",
                   icon: <Gavel className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_1.jpg",
+                  image: "/images/bg_4.png",
                 },
                 {
                   title: "Time & Billing",
                   description: "Track billable hours and generate professional invoices with ease.",
                   icon: <Shield className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_2.jpg",
+                  image: "/images/bg_5.png",
                 },
                 {
                   title: "Reporting & Analytics",
                   description:
                     "Unlock insights with detailed reports and performance analytics tailored to your practice.",
                   icon: <CheckCircle className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_3.jpg",
+                  image: "/images/bg_6.png",
                 },
               ].map((feature, index) => (
                 <motion.div
