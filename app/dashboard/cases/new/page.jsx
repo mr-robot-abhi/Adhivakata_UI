@@ -218,7 +218,7 @@ export default function NewCasePage() {
     courtHall: "",
     courtComplex: "",
     filingDate: new Date(),
-    hearingDate: null,
+    nextHearingDate: null,
     petitionerRole: "Petitioner",
     petitionerType: "Individual",
     petitioners: [],
@@ -365,6 +365,16 @@ export default function NewCasePage() {
         });
         return;
       }
+      
+      // Validate next hearing date is mandatory
+      if (!caseData.nextHearingDate) {
+        toast({
+          title: "Error",
+          description: "Next Hearing Date is mandatory. Please select a date.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Validate party section
@@ -469,7 +479,7 @@ export default function NewCasePage() {
         
         // Dates
         filingDate: caseData.filingDate ? new Date(caseData.filingDate).toISOString() : null,
-        hearingDate: caseData.hearingDate ? new Date(caseData.hearingDate).toISOString() : null,
+        nextHearingDate: caseData.nextHearingDate ? new Date(caseData.nextHearingDate).toISOString() : null,
         
         // Additional details
         description: caseData.description || "",
@@ -482,23 +492,25 @@ export default function NewCasePage() {
         
         // Format parties data
         parties: {
-          petitioner: (caseData.petitioners || []).map(petitioner => ({
-            name: petitioner.name,
-            role: petitioner.role || 'Petitioner',
-            type: petitioner.type || 'Individual',
-            email: petitioner.email || "",
-            contact: petitioner.contact || "",
-            address: petitioner.address || ""
-          })),
-          respondent: (caseData.respondents || []).map(respondent => ({
-            name: respondent.name,
-            role: respondent.role || 'Respondent',
-            type: respondent.type || 'Individual',
-            email: respondent.email || "",
-            contact: respondent.contact || "",
-            address: respondent.address || "",
-            opposingCounsel: respondent.opposingCounsel || ""
-          }))
+          petitioner: (caseData.petitioners || []).map(petitioner => {
+            const obj = { name: petitioner.name };
+            if (petitioner.type) obj.type = petitioner.type;
+            if (petitioner.role) obj.role = petitioner.role;
+            if (petitioner.email) obj.email = petitioner.email;
+            if (petitioner.contact) obj.contact = petitioner.contact;
+            if (petitioner.address) obj.address = petitioner.address;
+            return obj;
+          }),
+          respondent: (caseData.respondents || []).map(respondent => {
+            const obj = { name: respondent.name };
+            if (respondent.type) obj.type = respondent.type;
+            if (respondent.role) obj.role = respondent.role;
+            if (respondent.email) obj.email = respondent.email;
+            if (respondent.contact) obj.contact = respondent.contact;
+            if (respondent.address) obj.address = respondent.address;
+            if (respondent.opposingCounsel) obj.opposingCounsel = respondent.opposingCounsel;
+            return obj;
+          })
         },
         
         // Set advocates and clients based on user role
@@ -736,9 +748,7 @@ export default function NewCasePage() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
                             <SelectItem value="closed">Closed</SelectItem>
-                            <SelectItem value="archived">Archived</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -755,11 +765,11 @@ export default function NewCasePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="hearingDate">Next Hearing Date</Label>
+                        <Label htmlFor="nextHearingDate">Next Hearing Date <span className="text-red-500">*</span></Label>
                         <DatePicker
-                          id="hearingDate"
-                          selected={caseData.hearingDate}
-                          onSelect={(date) => handleDateChange("hearingDate", date)}
+                          id="nextHearingDate"
+                          selected={caseData.nextHearingDate}
+                          onSelect={(date) => handleDateChange("nextHearingDate", date)}
                         />
                       </div>
                     </div>

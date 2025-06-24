@@ -159,12 +159,18 @@ const api = {
         }
       })
 
+      // Set a very high limit to get all cases without pagination
+      queryParams.append('limit', '1000')
+
       const response = await fetch(`${API_URL}/cases?${queryParams.toString()}`, {
         method: "GET",
         headers: createHeaders(),
       })
 
       const data = await handleResponse(response)
+      console.log("API service - Raw response data:", data)
+      console.log("API service - data.data:", data.data)
+      console.log("API service - data.data length:", data.data ? data.data.length : "No data.data")
       return data.data || []
     },
 
@@ -491,11 +497,14 @@ const api = {
       const data = await handleResponse(response)
       return (
         data.data || {
+          totalCases: 0,
           activeCases: 0,
+          closedCases: 0,
           urgentCases: 0,
           upcomingHearings: 0,
           documents: 0,
           successRate: "0%",
+          activeClients: 0,
         }
       )
     },

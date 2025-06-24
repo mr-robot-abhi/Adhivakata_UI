@@ -255,6 +255,7 @@ export default function CalendarPage() {
         case: "",
       })
       setIsDialogOpen(false)
+      fetchEvents()
       toast({
         title: "Event created",
         description: "Your event has been added to the calendar.",
@@ -458,6 +459,11 @@ export default function CalendarPage() {
     const eventType = EVENT_TYPES.find((t) => t.value === type)
     return eventType ? eventType.color : "bg-gray-100 text-gray-800 border-gray-300"
   }
+
+  // Add useEffect to re-fetch events when viewMode changes
+  useEffect(() => {
+    fetchEvents()
+  }, [viewMode])
 
   return (
     <div className="space-y-6">
@@ -691,78 +697,39 @@ export default function CalendarPage() {
               <CardDescription>Your schedule for the next 7 days</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                 {events
                   .filter((event) => {
-                    const eventDate = new Date(event.date)
-                    const today = new Date()
-                    const nextWeek = new Date()
-                    nextWeek.setDate(today.getDate() + 7)
-                    return eventDate >= today && eventDate <= nextWeek
+                    // Use IST (Asia/Kolkata) for today (set to 22nd June 2024 for demo)
+                    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+                    const todayIST = new Date(Date.UTC(2024, 5, 22, 0, 0, 0));
+                    const sevenDaysLaterIST = new Date(todayIST.getTime() + 7 * 24 * 60 * 60 * 1000);
+                    const eventDate = new Date(new Date(event.date).getTime() + IST_OFFSET);
+                    return eventDate >= todayIST && eventDate <= sevenDaysLaterIST;
                   })
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .map((event) => (
-                    <div key={event.id} className={`p-3 rounded-lg border ${getEventColor(event.type)}`}>
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium">{event.title}</h3>
-                        {isLawyer && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-6 w-6">
-                                <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => editEvent(event)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedEvent(event)
-                                  setShowDeleteDialog(true)
-                                }}
-                                className="text-red-600"
-                              >
-                                <Trash className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                      <div className="mt-2 space-y-1 text-sm">
-                        <div className="flex items-center">
-                          <CalendarIcon className="h-3 w-3 mr-2" />
-                          <span>{new Date(event.date).toLocaleDateString()}</span>
+                    <div key={event.id} className={`flex items-center justify-between border-b pb-3 last:border-0 last:pb-0`}>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
+                          <p className="font-medium inline">{event.title}</p>
                         </div>
-                        {event.time && (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 mr-2" />
-                            <span>{event.time}</span>
-                          </div>
-                        )}
-                        {event.location && (
-                          <div className="flex items-center">
-                            <MapPin className="h-3 w-3 mr-2" />
-                            <span>{event.location}</span>
-                          </div>
-                        )}
-                        {event.case && (
-                          <div className="flex items-center">
-                            <Users className="h-3 w-3 mr-2" />
-                            <span>{event.case}</span>
-                          </div>
-                        )}
+                        <p className="text-sm text-muted-foreground">{event.case}</p>
+                        <p className="text-xs text-muted-foreground">{event.court}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
+                        <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
                       </div>
                     </div>
                   ))}
                 {events.filter((event) => {
-                  const eventDate = new Date(event.date)
-                  const today = new Date()
-                  const nextWeek = new Date()
-                  nextWeek.setDate(today.getDate() + 7)
-                  return eventDate >= today && eventDate <= nextWeek
+                  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+                  const todayIST = new Date(Date.UTC(2024, 5, 22, 0, 0, 0));
+                  const sevenDaysLaterIST = new Date(todayIST.getTime() + 7 * 24 * 60 * 60 * 1000);
+                  const eventDate = new Date(new Date(event.date).getTime() + IST_OFFSET);
+                  return eventDate >= todayIST && eventDate <= sevenDaysLaterIST;
                 }).length === 0 && (
                   <div className="text-center py-6">
                     <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />

@@ -243,9 +243,9 @@ function LawyerDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {}
 
   // Stat values (dynamic, fallback to 0)
-  const totalCases = summary?.activeCases || 0;
+  const totalCases = summary?.totalCases || 0;
   const pendingTasks = summary?.urgentCases || 0;
-  const activeClients = summary?.activeClients || 0;
+  const activeCases = summary?.activeCases || 0;
 
   // Bar chart data
   const barChartData = [
@@ -260,11 +260,11 @@ function LawyerDashboard({ data }) {
       <DashboardStats
         totalCases={totalCases}
         pendingTasks={pendingTasks}
-        activeThirdParty={activeClients}
-        activeLabel="Active Clients"
-        totalCasesDesc="Managed across all clients"
+        activeThirdParty={activeCases}
+        activeLabel="Active Cases"
+        totalCasesDesc="Total cases managed"
         pendingTasksDesc="Requires immediate attention"
-        activeThirdPartyDesc="Currently engaged clients"
+        activeThirdPartyDesc="Currently active cases"
       />
 
       {/* Bar Chart & Upcoming Events Section */}
@@ -278,32 +278,34 @@ function LawyerDashboard({ data }) {
           <CardContent>
             <CaseStatisticsChart 
               data={[
-                { name: "Open", value: summary?.activeCases || 0 },
-                { name: "Closed", value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
-                { name: "Pending", value: summary?.urgentCases || 0 }
+                { name: "Active", value: summary?.activeCases || 0 },
+                { name: "Total", value: summary?.totalCases || 0 }
               ]} 
             />
           </CardContent>
         </Card>
-        {/* Upcoming Hearings Section */}
+        {/* Upcoming Events Section */}
         <Card>
           <CardHeader>
-            <CardTitle>Upcoming Hearings</CardTitle>
+            <CardTitle>Upcoming Events</CardTitle>
             <CardDescription>Your schedule for the next 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
               {upcomingEvents?.length > 0 ? (
                 upcomingEvents.map((event, index) => (
                   <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
-                      <p className="font-medium">{event.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
+                        <p className="font-medium inline">{event.title}</p>
+                      </div>
                       <p className="text-sm text-muted-foreground">{event.case}</p>
                       <p className="text-xs text-muted-foreground">{event.court}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{event.date.split(",")[0]}</p>
-                      <p className="text-sm text-muted-foreground">{event.date.split(",")[1]}</p>
+                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
+                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
                     </div>
                   </div>
                 ))
@@ -380,6 +382,13 @@ function LawyerDashboard({ data }) {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 flex justify-center">
+            <Link href="/dashboard/cases">
+              <Button variant="outline">
+                View All Cases
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -432,15 +441,14 @@ function ClientDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {};
 
   // Stat values (dynamic, fallback to 0)
-  const totalCases = summary?.activeCases || 0;
+  const totalCases = summary?.totalCases || 0;
   const pendingTasks = summary?.urgentCases || 0;
-  const activeAdvocates = summary?.activeAdvocates || 0;
+  const activeCases = summary?.activeCases || 0;
 
   // Bar chart data (same as lawyer)
   const barChartData = [
-    { name: 'Open', value: summary?.activeCases || 0 },
-    { name: 'Closed', value: Math.max((summary?.totalCases || 0) - (summary?.activeCases || 0), 0) },
-    { name: 'Pending', value: summary?.urgentCases || 0 }
+    { name: 'Active', value: summary?.activeCases || 0 },
+    { name: 'Total', value: summary?.totalCases || 0 }
   ];
 
   return (
@@ -449,11 +457,11 @@ function ClientDashboard({ data }) {
       <DashboardStats
         totalCases={totalCases}
         pendingTasks={pendingTasks}
-        activeThirdParty={activeAdvocates}
-        activeLabel="Active Advocates"
-        totalCasesDesc="Managed across all advocates"
+        activeThirdParty={activeCases}
+        activeLabel="Active Cases"
+        totalCasesDesc="Total cases managed"
         pendingTasksDesc="Requires immediate attention"
-        activeThirdPartyDesc="Currently engaged advocates"
+        activeThirdPartyDesc="Currently active cases"
       />
 
       {/* Bar Chart & Upcoming Events Section (same as lawyer) */}
@@ -472,15 +480,18 @@ function ClientDashboard({ data }) {
         <Card>
           <CardHeader>
             <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Key Dates and Meetings on your schedule</CardDescription>
+            <CardDescription>Your schedule for the next 7 days</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
               {upcomingEvents?.length > 0 ? (
-                upcomingEvents.map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+                upcomingEvents.map((event, index) => (
+                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
-                      <p className="font-medium">{event.title}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
+                        <p className="font-medium inline">{event.title}</p>
+                      </div>
                       <p className="text-sm text-muted-foreground">{event.case}</p>
                       <p className="text-xs text-muted-foreground">{event.court}</p>
                     </div>
@@ -494,6 +505,11 @@ function ClientDashboard({ data }) {
                 <div className="text-center py-6">
                   <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">No upcoming events</p>
+                  <Link href="/dashboard/calendar">
+                    <Button variant="outline" className="mt-2">
+                      Schedule an Event
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
@@ -558,6 +574,13 @@ function ClientDashboard({ data }) {
               </tbody>
             </table>
           </div>
+          <div className="mt-4 flex justify-center">
+            <Link href="/dashboard/cases">
+              <Button variant="outline">
+                View All Cases
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
 
@@ -604,136 +627,4 @@ function ClientDashboard({ data }) {
       </div>
     </>
   );
-
-      {/* Lower Section: Bar Chart & Events */}
-      <div className="grid gap-6 md:grid-cols-2 mt-8">
-        {/* Bar Chart Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Case Statistics</CardTitle>
-            <CardDescription>Breakdown of cases by status</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <BarChart3Icon className="h-8 w-8 mb-2 text-primary" />
-            <div className="w-full h-64 flex items-center justify-center">
-              {/* Replace with shadcn/ui chart if available, else fallback */}
-              {barChartData.every(item => item.value === 0) ? (
-                <div className="text-muted-foreground text-center w-full">No case statistics available</div>
-              ) : (
-                <div className="w-full">
-                  {/* Example bar chart, replace with actual chart component */}
-                  {barChartData.map((item, idx) => (
-                    <div key={item.label} className="flex items-center mb-3">
-                      <span className="w-32 text-sm">{item.label}</span>
-                      <div className="flex-1 h-4 bg-muted rounded mx-2">
-                        <div style={{ width: `${Math.min(item.value * 10, 100)}%` }} className="h-4 bg-primary rounded" />
-                      </div>
-                      <span className="w-8 text-right">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        {/* Upcoming Events Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Key Dates and Meetings on your schedule</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {upcomingEvents?.length > 0 ? (
-                upcomingEvents.map((event, idx) => (
-                  <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                    <div>
-                      <p className="font-medium">{event.title}</p>
-                      <p className="text-sm text-muted-foreground">{event.case}</p>
-                      <p className="text-xs text-muted-foreground">{event.court}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
-                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-6">
-                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No upcoming events</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Cases Table */}
-      <div className="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Cases</CardTitle>
-            <CardDescription>Latest case entries and updates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm border rounded-md">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-4 py-2 text-left font-semibold">Case Title</th>
-                    <th className="px-4 py-2 text-left font-semibold">Advocate</th>
-                    <th className="px-4 py-2 text-left font-semibold">Status</th>
-                    <th className="px-4 py-2 text-left font-semibold">Next Hearing</th>
-                    <th className="px-4 py-2 text-left font-semibold">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentCases?.length > 0 ? (
-                    recentCases.map((caseItem, idx) => (
-                      <tr key={caseItem.id || idx} className="border-b hover:bg-muted/50">
-                        <td className="px-4 py-2">
-                          <Link href={`/dashboard/cases/${caseItem.id}`} className="text-primary hover:underline">
-                            {caseItem.title}
-                          </Link>
-                        </td>
-                        <td className="px-4 py-2">
-                          {caseItem.leadAdvocate?.name || 
-                           caseItem.advocates?.[0]?.name || 
-                           caseItem.lawyer?.name || 
-                           '-'}
-                        </td>
-                        <td className="px-4 py-2">
-                          <Badge 
-                            variant={caseItem.status === 'Active' ? 'default' : 'outline'}
-                            className={caseItem.status === 'Active' ? 'bg-green-100 text-green-800' : 'text-gray-600'}
-                          >
-                            {caseItem.status || 'Pending'}
-                          </Badge>
-                        </td>
-                        <td className="px-4 py-2">
-                          {caseItem.nextHearingDate ? (
-                            <div className="flex items-center gap-1">
-                              <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                              <span>{new Date(caseItem.nextHearingDate).toLocaleDateString()}</span>
-                            </div>
-                          ) : 'N/A'}
-                        </td>
-                        <td className="px-4 py-2">
-                          <Link href={`/dashboard/cases/${caseItem.id}`}><Button size="sm" variant="outline">View Details</Button></Link>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="text-center py-6 text-muted-foreground">No recent cases found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-  ;
 }

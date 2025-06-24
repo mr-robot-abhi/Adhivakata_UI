@@ -46,18 +46,24 @@ export default function CasesPage() {
         // API call to fetch cases
         const response = await api.cases.getAll(filters)
         console.log("API response:", response)
+        console.log("Response type:", typeof response)
+        console.log("Response length:", Array.isArray(response) ? response.length : "Not an array")
 
         // Check if response is an array directly
         if (Array.isArray(response)) {
           setCases(response)
+          console.log("Set cases from array:", response.length)
         }
         // If response is an object with a data property that's an array
         else if (response && Array.isArray(response.data)) {
           setCases(response.data)
+          console.log("Set cases from response.data:", response.data.length)
         }
         // If we have a data property but it's not an array
         else if (response && response.data) {
-          setCases([response.data].flat())
+          const caseArray = [response.data].flat()
+          setCases(caseArray)
+          console.log("Set cases from flattened data:", caseArray.length)
         }
         // Fallback to sample data if no valid response
         else {
@@ -155,7 +161,8 @@ export default function CasesPage() {
             <div>
               <CardTitle>{isLawyer ? "All Cases" : "My Cases"}</CardTitle>
               <CardDescription>
-                {isLawyer ? "Manage and view all your legal cases" : "View your active legal cases"}
+                {isLawyer ? "Manage and view all your legal cases" : "View your active legal cases"} 
+                {filteredCases.length > 0 && ` (${filteredCases.length} cases)`}
               </CardDescription>
             </div>
             <div className="flex flex-col space-y-2 md:flex-row md:space-x-2 md:space-y-0">
@@ -176,7 +183,6 @@ export default function CasesPage() {
                 <SelectContent>
                   <SelectItem value="All Statuses">All Statuses</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
@@ -208,9 +214,9 @@ export default function CasesPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <table className="w-full border-collapse">
-              <thead>
+              <thead className="sticky top-0 bg-background z-10">
                 <tr className="border-b">
                   <th className="py-3 text-left font-medium">Case Title</th>
                   <th className="py-3 text-left font-medium">Case Number</th>

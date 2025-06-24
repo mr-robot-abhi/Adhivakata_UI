@@ -11,6 +11,10 @@ import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Calendar, Clock, FileText, MapPin, User, Users, AlertTriangle, CheckCircle } from "lucide-react"
 import api from "@/services/api"
 import PartyDetails from "@/components/ui/party-details"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Calendar as CalendarIcon } from "@/components/ui/calendar"
+import { toast } from "@/components/ui/use-toast"
 
 export default function CaseDetailsPage() {
   const { id } = useParams()
@@ -21,6 +25,12 @@ export default function CaseDetailsPage() {
   const [error, setError] = useState(null)
   const [documents, setDocuments] = useState([])
   const [events, setEvents] = useState([])
+  const [showUploadDialog, setShowUploadDialog] = useState(false)
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false)
+  const [uploadForm, setUploadForm] = useState({ file: null, description: "" })
+  const [uploading, setUploading] = useState(false)
+  const [hearingDate, setHearingDate] = useState(null)
+  const [scheduling, setScheduling] = useState(false)
   
 
   useEffect(() => {
@@ -125,6 +135,45 @@ export default function CaseDetailsPage() {
       urgent: "bg-red-100 text-red-800",
     }
     return priorityMap[priority?.toLowerCase()] || "bg-gray-100 text-gray-800"
+  }
+
+  const handleFileChange = (e) => {
+    setUploadForm((prev) => ({ ...prev, file: e.target.files[0] }))
+  }
+
+  const handleUploadSubmit = async (e) => {
+    e.preventDefault()
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", uploadForm.file)
+      formData.append("description", uploadForm.description)
+      formData.append("caseId", id)
+      await api.documents.upload(formData)
+      setShowUploadDialog(false)
+      setUploadForm({ file: null, description: "" })
+      // Optionally refresh documents list here
+      toast({ title: "Success", description: "Document uploaded." })
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to upload document." })
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleScheduleSubmit = async () => {
+    setScheduling(true)
+    try {
+      await api.events.create({ caseId: id, date: hearingDate })
+      setShowScheduleDialog(false)
+      setHearingDate(null)
+      // Optionally refresh events list here
+      toast({ title: "Success", description: "Hearing scheduled." })
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to schedule hearing." })
+    } finally {
+      setScheduling(false)
+    }
   }
 
   if (loading) {
@@ -300,104 +349,31 @@ export default function CaseDetailsPage() {
                   <CardDescription>Key individuals and parties associated with the case.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Lawyers Section */}
+                  {/* Legal Team Section */}
                   <div className="mb-4 pb-4 border-b">
                     <h3 className="text-md font-semibold mb-3 text-gray-700">Legal Team</h3>
-                    
-                    {/* Lead Advocate - Show the lead advocate if available */}
-                    {caseData.advocates?.length > 0 ? (
-                      <div className="space-y-4">
-                        {caseData.advocates
-                          .filter(adv => adv.isLead)
-                          .map((advocate, idx) => (
-                            <div key={`lead-advocate-${idx}`} className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
-                              <div className="flex justify-between items-start">
-                                <div className="w-full">
-                                  <div className="flex items-center flex-wrap gap-2 mb-2">
-                                    <User className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
-                                    <p className="font-medium text-blue-800">
-                                      {advocate.name || 'Lead Advocate'}
-                                    </p>
-                                    <Badge className="bg-blue-600 text-white text-xs">
-                                      Lead Advocate
-                                    </Badge>
-                                    {advocate.level && (
-                                      <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                        {advocate.level}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="ml-5 space-y-1.5">
-                                    {advocate.email && (
-                                      <p className="text-sm text-gray-700 flex items-start">
-                                        <span className="w-16 text-gray-500">Email:</span>
-                                        <span className="flex-1">{advocate.email}</span>
-                                      </p>
-                                    )}
-                                    {advocate.contact && (
-                                      <p className="text-sm text-gray-700 flex items-start">
-                                        <span className="w-16 text-gray-500">Contact:</span>
-                                        <span className="flex-1">{advocate.contact}</span>
-                                      </p>
-                                    )}
-                                    {advocate.company && (
-                                      <p className="text-sm text-gray-700 flex items-start">
-                                        <span className="w-16 text-gray-500">Firm:</span>
-                                        <span className="flex-1">{advocate.company}</span>
-                                      </p>
-                                    )}
-                                    {advocate.gst && (
-                                      <p className="text-sm text-gray-700 flex items-start">
-                                        <span className="w-16 text-gray-500">GST:</span>
-                                        <span className="flex-1">{advocate.gst}</span>
-                                      </p>
-                                    )}
-                                    {advocate.chairPosition && (
-                                      <p className="text-sm text-gray-700 flex items-start">
-                                        <span className="w-16 text-gray-500">Position:</span>
-                                        <span className="flex-1 capitalize">
-                                          {advocate.chairPosition
-                                            .replace(/_/g, ' ')
-                                            .split(' ')
-                                            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                                            .join(' ')}
-                                        </span>
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-muted-foreground">
-                        No advocate information available
-                      </div>
-                    )}
-
-                    {/* Additional Advocates */}
-                    {caseData.advocates?.filter(a => !a.isLead).length > 0 ? (
-                      <div className="mt-6">
-                        <h4 className="text-sm font-medium mb-3 text-gray-700">Additional Advocates</h4>
-                        <div className="space-y-3">
-                          {caseData.advocates
-                            .filter(a => !a.isLead)
-                            .map((advocate, index) => (
-                              <div key={`advocate-${index}`} className="p-4 border rounded-lg bg-white shadow-sm hover:shadow transition-shadow">
+                    {(caseData.advocates && caseData.advocates.length > 0) || (caseData.lawyers && caseData.lawyers.length > 0) ? (
+                      <>
+                        {/* Advocates */}
+                        {caseData.advocates && caseData.advocates.length > 0 && (
+                          <div className="space-y-4">
+                            {caseData.advocates.map((advocate, idx) => (
+                              <div key={`advocate-${idx}`} className="mb-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
                                 <div className="flex justify-between items-start">
                                   <div className="w-full">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <User className="h-4 w-4 text-blue-600 flex-shrink-0" />
-                                      <p className="font-medium text-gray-800">{advocate.name}</p>
+                                    <div className="flex items-center flex-wrap gap-2 mb-2">
+                                      <User className="h-4 w-4 text-blue-600 mr-1 flex-shrink-0" />
+                                      <p className="font-medium text-blue-800">
+                                        {advocate.name || 'Advocate'}
+                                      </p>
+                                      {advocate.isLead && <Badge className="bg-blue-600 text-white text-xs">Lead Advocate</Badge>}
                                       {advocate.level && (
                                         <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                                           {advocate.level}
                                         </Badge>
                                       )}
                                     </div>
-                                    <div className="ml-6 space-y-1.5">
+                                    <div className="ml-5 space-y-1.5">
                                       {advocate.email && (
                                         <p className="text-sm text-gray-700 flex items-start">
                                           <span className="w-16 text-gray-500">Email:</span>
@@ -422,94 +398,97 @@ export default function CaseDetailsPage() {
                                           <span className="flex-1">{advocate.gst}</span>
                                         </p>
                                       )}
+                                      {advocate.chairPosition && (
+                                        <p className="text-sm text-gray-700 flex items-start">
+                                          <span className="w-16 text-gray-500">Position:</span>
+                                          <span className="flex-1 capitalize">
+                                            {advocate.chairPosition
+                                              .replace(/_/g, ' ')
+                                              .split(' ')
+                                              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                                              .join(' ')}
+                                          </span>
+                                        </p>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
                               </div>
                             ))}
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {/* Additional Lawyers */}
-                    {caseData.lawyers && caseData.lawyers.length > 0 && (
-                      <div className="space-y-3 mt-4">
-                        {caseData.lawyers
-                          .filter(lawyer => !lawyer.isPrimary)
-                          .map((lawyer, index) => (
-                            <div key={`lawyer-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center flex-wrap gap-2">
-                                      <User className="h-4 w-4 text-gray-500 mr-1 flex-shrink-0" />
-                                      <p className="font-medium text-sm">{lawyer.name}</p>
-                                      
-                                      {/* Role Badge */}
-                                      {lawyer.role && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {lawyer.role.charAt(0).toUpperCase() + lawyer.role.slice(1)}
-                                        </Badge>
-                                      )}
-                                      
-                                      {/* Level Badge */}
-                                      {lawyer.level && (
-                                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                                          {lawyer.level}
-                                        </Badge>
-                                      )}
-                                      
-                                      {/* Position Badge */}
-                                      {lawyer.chairPosition && lawyer.chairPosition !== 'other' && (
-                                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                          {lawyer.chairPosition.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                                        </Badge>
-                                      )}
-                                      
-                                      {/* Primary Badge */}
-                                      {lawyer.isPrimary && (
-                                        <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                                          Primary
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    
-                                    <div className="ml-5 mt-2 space-y-1.5">
-                                      {lawyer.email && (
-                                        <p className="text-sm text-gray-600 flex items-start">
-                                          <span className="w-16 text-gray-500 text-sm">Email:</span>
-                                          <span className="flex-1">{lawyer.email}</span>
-                                        </p>
-                                      )}
-                                      {lawyer.contact && (
-                                        <p className="text-sm text-gray-600 flex items-start">
-                                          <span className="w-16 text-gray-500 text-sm">Contact:</span>
-                                          <span className="flex-1">{lawyer.contact}</span>
-                                        </p>
-                                      )}
-                                      {lawyer.company && (
-                                        <p className="text-sm text-gray-600 flex items-start">
-                                          <span className="w-16 text-gray-500 text-sm">Firm:</span>
-                                          <span className="flex-1">{lawyer.company}</span>
-                                        </p>
-                                      )}
-                                      {lawyer.gst && (
-                                        <p className="text-sm text-gray-600 flex items-start">
-                                          <span className="w-16 text-gray-500 text-sm">GST:</span>
-                                          <span className="flex-1">{lawyer.gst}</span>
-                                        </p>
-                                      )}
+                          </div>
+                        )}
+                        {/* Lawyers */}
+                        {caseData.lawyers && caseData.lawyers.length > 0 && (
+                          <div className="space-y-3 mt-4">
+                            {caseData.lawyers.map((lawyer, index) => (
+                              <div key={`lawyer-${index}`} className="p-3 border rounded-lg bg-white shadow-sm">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <div className="flex-1">
+                                      <div className="flex items-center flex-wrap gap-2">
+                                        <User className="h-4 w-4 text-gray-500 mr-1 flex-shrink-0" />
+                                        <p className="font-medium text-sm">{lawyer.name}</p>
+                                        {/* Role Badge */}
+                                        {lawyer.role && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {lawyer.role.charAt(0).toUpperCase() + lawyer.role.slice(1)}
+                                          </Badge>
+                                        )}
+                                        {/* Level Badge */}
+                                        {lawyer.level && (
+                                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                                            {lawyer.level}
+                                          </Badge>
+                                        )}
+                                        {/* Position Badge */}
+                                        {lawyer.chairPosition && lawyer.chairPosition !== 'other' && (
+                                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                                            {lawyer.chairPosition.replace(/_/g, ' ').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                                          </Badge>
+                                        )}
+                                        {/* Primary Badge */}
+                                        {lawyer.isPrimary && (
+                                          <Badge className="ml-1 bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                            Primary
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="ml-5 mt-2 space-y-1.5">
+                                        {lawyer.email && (
+                                          <p className="text-sm text-gray-600 flex items-start">
+                                            <span className="w-16 text-gray-500 text-sm">Email:</span>
+                                            <span className="flex-1">{lawyer.email}</span>
+                                          </p>
+                                        )}
+                                        {lawyer.contact && (
+                                          <p className="text-sm text-gray-600 flex items-start">
+                                            <span className="w-16 text-gray-500 text-sm">Contact:</span>
+                                            <span className="flex-1">{lawyer.contact}</span>
+                                          </p>
+                                        )}
+                                        {lawyer.company && (
+                                          <p className="text-sm text-gray-600 flex items-start">
+                                            <span className="w-16 text-gray-500 text-sm">Firm:</span>
+                                            <span className="flex-1">{lawyer.company}</span>
+                                          </p>
+                                        )}
+                                        {lawyer.gst && (
+                                          <p className="text-sm text-gray-600 flex items-start">
+                                            <span className="w-16 text-gray-500 text-sm">GST:</span>
+                                            <span className="flex-1">{lawyer.gst}</span>
+                                          </p>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-
-                    {(!caseData.lawyers || caseData.lawyers.length === 0) && (
-                      <p className="text-sm text-muted-foreground">No additional lawyers have been added to this case.</p>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">No advocate or lawyer information available.</div>
                     )}
                   </div>
 
@@ -656,34 +635,36 @@ export default function CaseDetailsPage() {
                   {/* Stakeholders Section */}
                   <div className="mt-6">
                     <h3 className="text-md font-semibold mb-3 text-gray-700">Stakeholders</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Witnesses */}
-                      <div className="p-4 border rounded-lg bg-amber-50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-4 w-4 text-amber-600" />
-                          <h4 className="font-medium">Witnesses</h4>
-                        </div>
-                        <p className="text-sm text-gray-600">No witnesses added yet.</p>
+                    {caseData.stakeholders && caseData.stakeholders.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Group stakeholders by roleInCase */}
+                        {['Witness', 'Expert', 'Beneficiary', 'Other', undefined, ''].map((role) => {
+                          const filtered = caseData.stakeholders.filter(s => (s.roleInCase || '').toLowerCase().includes(role?.toLowerCase() || ''));
+                          if (filtered.length === 0) return null;
+                          return (
+                            <div key={role || 'other'} className={`p-4 border rounded-lg ${role === 'Witness' ? 'bg-amber-50' : role === 'Expert' ? 'bg-green-50' : 'bg-blue-50'} md:col-span-1`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <Users className={`h-4 w-4 ${role === 'Witness' ? 'text-amber-600' : role === 'Expert' ? 'text-green-600' : 'text-blue-600'}`} />
+                                <h4 className="font-medium">{role || 'Other Stakeholders'}</h4>
+                              </div>
+                              <div className="space-y-2">
+                                {filtered.map((stakeholder, idx) => (
+                                  <div key={idx} className="mb-2">
+                                    <p className="font-medium text-sm">{stakeholder.name}</p>
+                                    {stakeholder.roleInCase && <p className="text-xs text-gray-600">Role: {stakeholder.roleInCase}</p>}
+                                    {stakeholder.email && <p className="text-xs text-gray-600">Email: {stakeholder.email}</p>}
+                                    {stakeholder.contact && <p className="text-xs text-gray-600">Contact: {stakeholder.contact}</p>}
+                                    {stakeholder.address && <p className="text-xs text-gray-600">Address: {stakeholder.address}</p>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Experts */}
-                      <div className="p-4 border rounded-lg bg-green-50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <User className="h-4 w-4 text-green-600" />
-                          <h4 className="font-medium">Expert Consultants</h4>
-                        </div>
-                        <p className="text-sm text-gray-600">No experts added yet.</p>
-                      </div>
-
-                      {/* Other Stakeholders */}
-                      <div className="p-4 border rounded-lg bg-blue-50 md:col-span-2">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          <h4 className="font-medium">Other Stakeholders</h4>
-                        </div>
-                        <p className="text-sm text-gray-600">No other stakeholders added yet.</p>
-                      </div>
-                    </div>
+                    ) : (
+                      <div className="text-center py-4 text-muted-foreground">No stakeholders added yet.</div>
+                    )}
                   </div>
 
                   {/* Fallback if no people or parties at all */}
@@ -737,9 +718,9 @@ export default function CaseDetailsPage() {
                 </CardContent>
                 {isLawyer && (
                   <CardFooter>
-                    <Button className="w-full" onClick={() => router.push(`/dashboard/documents/upload?caseId=${id}`)}>
-                      Upload New Document
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setShowUploadDialog(true)} variant="secondary">Upload Document</Button>
+                    </div>
                   </CardFooter>
                 )}
               </Card>
@@ -781,9 +762,9 @@ export default function CaseDetailsPage() {
                 </CardContent>
                 {isLawyer && (
                   <CardFooter>
-                    <Button className="w-full" onClick={() => router.push(`/dashboard/cases/${id}/edit`)}>
-                      Set Next Hearing
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={() => setShowScheduleDialog(true)} variant="secondary">Schedule Hearing</Button>
+                    </div>
                   </CardFooter>
                 )}
               </Card>
@@ -891,6 +872,29 @@ export default function CaseDetailsPage() {
           </Card>
         </div>
       </div>
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Document</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUploadSubmit} className="space-y-4">
+            <Input type="file" onChange={handleFileChange} required />
+            <Input type="text" placeholder="Description" value={uploadForm.description} onChange={e => setUploadForm(prev => ({ ...prev, description: e.target.value }))} />
+            <Button type="submit" disabled={uploading}>{uploading ? "Uploading..." : "Upload"}</Button>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Hearing</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Calendar selected={hearingDate} onSelect={setHearingDate} />
+            <Button onClick={handleScheduleSubmit} disabled={scheduling || !hearingDate}>{scheduling ? "Scheduling..." : "Set Hearing Date"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
