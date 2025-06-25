@@ -205,14 +205,6 @@ export default function EditCasePage() {
         });
         return;
       }
-      if (!petitioner.role) {
-        toast({
-          title: "Error",
-          description: `Please select a role for Petitioner ${i + 1}`,
-          variant: "destructive",
-        });
-        return;
-      }
       if (!petitioner.type) {
         toast({
           title: "Error",
@@ -735,8 +727,8 @@ export default function EditCasePage() {
                     <div className="space-y-4">
                       <div className="flex items-center space-x-4">
                         <Select
-                          value={caseData.petitionerRole || 'Petitioner'}
-                          onValueChange={val => setCaseData(prev => ({ ...prev, petitionerRole: val }))}
+                          value={caseData.petitionerLabel || 'Petitioner'}
+                          onValueChange={val => setCaseData(prev => ({ ...prev, petitionerLabel: val }))}
                         >
                           <SelectTrigger className="w-56">
                             <SelectValue />
@@ -748,19 +740,6 @@ export default function EditCasePage() {
                             <SelectItem value="Complainant">Complainant</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Select
-                          value={caseData.petitionerType || 'Individual'}
-                          onValueChange={val => setCaseData(prev => ({ ...prev, petitionerType: val }))}
-                        >
-                          <SelectTrigger className="w-56">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Individual">Individual</SelectItem>
-                            <SelectItem value="Corporation">Corporation</SelectItem>
-                            <SelectItem value="Organization">Organization</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <Button 
                           type="button" 
                           onClick={() => setCaseData(prev => ({
@@ -768,8 +747,8 @@ export default function EditCasePage() {
                             petitioners: [
                               ...(prev.petitioners || []), 
                               { 
-                                role: prev.petitionerRole || 'Petitioner', 
-                                type: prev.petitionerType || 'Individual', 
+                                label: prev.petitionerLabel || 'Petitioner', 
+                                type: 'Individual', 
                                 name: '',
                                 email: '',
                                 contact: '',
@@ -778,7 +757,7 @@ export default function EditCasePage() {
                             ]
                           }))}
                         >
-                          Add {caseData.petitionerRole || 'Petitioner'}
+                          Add {caseData.petitionerLabel || 'Petitioner'}
                         </Button>
                       </div>
                       {caseData.petitioners && caseData.petitioners.length > 0 && (
@@ -786,7 +765,7 @@ export default function EditCasePage() {
                           {caseData.petitioners.map((petitioner, idx) => (
                             <div key={idx} className="border rounded-lg p-4 space-y-3">
                               <div className="flex items-center justify-between">
-                                <h4 className="font-medium">{petitioner.role || 'Petitioner'} {idx + 1}</h4>
+                                <h4 className="font-medium">{petitioner.label || 'Petitioner'} {idx + 1}</h4>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -881,16 +860,16 @@ export default function EditCasePage() {
                     <div className="space-y-4">
                       <div className="flex items-center space-x-4">
                         <Select
-                          value={caseData.respondentRole || 'Respondent'}
-                          onValueChange={val => setCaseData(prev => ({ ...prev, respondentRole: val }))}
+                          value={caseData.respondentLabel || 'Defendant'}
+                          onValueChange={val => setCaseData(prev => ({ ...prev, respondentLabel: val }))}
                         >
                           <SelectTrigger className="w-56">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Respondent">Respondent</SelectItem>
-                            <SelectItem value="Accused">Accused</SelectItem>
                             <SelectItem value="Defendant">Defendant</SelectItem>
+                            <SelectItem value="Accused">Accused</SelectItem>
+                            <SelectItem value="Respondent">Respondent</SelectItem>
                             <SelectItem value="Opponent">Opponent</SelectItem>
                           </SelectContent>
                         </Select>
@@ -901,18 +880,17 @@ export default function EditCasePage() {
                             respondents: [
                               ...(prev.respondents || []), 
                               { 
-                                role: prev.respondentRole || 'Respondent', 
+                                label: prev.respondentLabel || 'Defendant', 
                                 type: 'Individual', 
                                 name: '',
                                 email: '',
                                 contact: '',
-                                address: '',
-                                opposingCounsel: ''
+                                address: ''
                               }
                             ]
                           }))}
                         >
-                          Add {caseData.respondentRole || 'Respondent'}
+                          Add {caseData.respondentLabel || 'Defendant'}
                         </Button>
                       </div>
                       {caseData.respondents && caseData.respondents.length > 0 && (
@@ -920,7 +898,7 @@ export default function EditCasePage() {
                           {caseData.respondents.map((respondent, idx) => (
                             <div key={idx} className="border rounded-lg p-4 space-y-3">
                               <div className="flex items-center justify-between">
-                                <h4 className="font-medium">{respondent.role || 'Respondent'} {idx + 1}</h4>
+                                <h4 className="font-medium">{respondent.label || 'Defendant'} {idx + 1}</h4>
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -1002,18 +980,6 @@ export default function EditCasePage() {
                                     }}
                                     placeholder="Full address"
                                     rows={2}
-                                  />
-                                </div>
-                                <div className="space-y-2 md:col-span-2">
-                                  <Label>Opposing Counsel</Label>
-                                  <Input
-                                    value={respondent.opposingCounsel}
-                                    onChange={e => {
-                                      const arr = [...caseData.respondents]; 
-                                      arr[idx].opposingCounsel = e.target.value; 
-                                      setCaseData(prev => ({ ...prev, respondents: arr }));
-                                    }}
-                                    placeholder="Name of the opposing counsel"
                                   />
                                 </div>
                               </div>
