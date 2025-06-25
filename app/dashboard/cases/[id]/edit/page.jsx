@@ -479,7 +479,7 @@ export default function EditCasePage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="nextHearingDate">Next Hearing Date <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="nextHearingDate">First Hearing Date <span className="text-red-500">*</span></Label>
                         <DatePicker
                           id="nextHearingDate"
                           selected={caseData.nextHearingDate}

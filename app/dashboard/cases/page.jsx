@@ -116,15 +116,11 @@ export default function CasesPage() {
       categoryFilter === "All Categories" ||
       (caseItem.type && caseItem.type.toLowerCase() === categoryFilter.toLowerCase())
 
-    const matchesDistrict =
-      caseFilter === "all" || (caseItem.district && caseItem.district.toLowerCase() === caseFilter.toLowerCase())
-
-    return matchesSearch && matchesStatus && matchesType && matchesDistrict
+    return matchesSearch && matchesStatus && matchesType
   })
 
   // Get unique values for filters
   const caseTypes = ["All Categories", ...new Set(uniqueCases.map((c) => c.caseType || c.type).filter(Boolean))]
-  const districts = ["all", ...new Set(uniqueCases.map((c) => c.district).filter(Boolean))]
 
   if (loading) {
     return (
@@ -198,18 +194,6 @@ export default function CasesPage() {
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={caseFilter} onValueChange={setCaseFilter}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="District" />
-                </SelectTrigger>
-                <SelectContent>
-                  {districts.map((district) => (
-                    <SelectItem key={district} value={district}>
-                      {district === "all" ? "All Districts" : district}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
@@ -223,8 +207,6 @@ export default function CasesPage() {
                   <th className="py-3 text-left font-medium">Type</th>
                   {isLawyer && <th className="py-3 text-left font-medium">Client</th>}
                   <th className="py-3 text-left font-medium">Court</th>
-                  <th className="py-3 text-left font-medium">Court Hall</th>
-                  <th className="py-3 text-left font-medium">District</th>
                   <th className="py-3 text-left font-medium">Status</th>
                   <th className="py-3 text-left font-medium">Next Hearing</th>
                   <th className="py-3 text-left font-medium">Actions</th>
@@ -232,44 +214,50 @@ export default function CasesPage() {
               </thead>
               <tbody>
                 {filteredCases.length > 0 ? (
-                  filteredCases.map((caseItem) => (
-                    <tr key={caseItem.id} className="border-b hover:bg-muted/50">
-                      <td className="py-3">
-                        <Link
-                          href={`/dashboard/cases/${caseItem.id}`}
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {caseItem.title}
-                        </Link>
-                      </td>
-                      <td className="py-3">{caseItem.number}</td>
-                      <td className="py-3">{caseItem.type}</td>
-                      {isLawyer && <td className="py-3">{caseItem.client}</td>}
-                      <td className="py-3">{caseItem.court}</td>
-                      <td className="py-3">{caseItem.courtHall}</td>
-                      <td className="py-3">{caseItem.district}</td>
-                      <td className="py-3">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                            caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {caseItem.status}
-                        </span>
-                      </td>
-                      <td className="py-3">
-                        {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
-                      </td>
-                      <td className="py-3 text-right">
-                        <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
+                  filteredCases.map((caseItem) => {
+                    // Fix client column: show client name if available, fallback to clients[0]?.name, else 'No Client'
+                    let clientName = caseItem.client;
+                    if (!clientName && Array.isArray(caseItem.clients) && caseItem.clients.length > 0) {
+                      clientName = caseItem.clients[0]?.name;
+                    }
+                    if (!clientName) clientName = 'No Client';
+                    return (
+                      <tr key={caseItem.id} className="border-b hover:bg-muted/50">
+                        <td className="py-3">
+                          <Link
+                            href={`/dashboard/cases/${caseItem.id}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {caseItem.title}
+                          </Link>
+                        </td>
+                        <td className="py-3">{caseItem.number}</td>
+                        <td className="py-3">{caseItem.type}</td>
+                        {isLawyer && <td className="py-3">{clientName}</td>}
+                        <td className="py-3">{caseItem.court}</td>
+                        <td className="py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {caseItem.status}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
+                        </td>
+                        <td className="py-3 text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={isLawyer ? 10 : 9} className="py-6 text-center text-muted-foreground">
+                    <td colSpan={isLawyer ? 8 : 7} className="py-6 text-center text-muted-foreground">
                       No cases found. Try adjusting your filters or{' '}
                       <Link href="/dashboard/cases/new" className="text-primary hover:underline">
                         add a new case

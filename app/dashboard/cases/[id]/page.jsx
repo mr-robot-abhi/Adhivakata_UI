@@ -13,7 +13,8 @@ import api from "@/services/api"
 import PartyDetails from "@/components/ui/party-details"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Calendar as CalendarIcon } from "@/components/ui/calendar"
+import { Calendar as DatePicker } from "@/components/ui/calendar"
+import { Calendar as CalendarIcon } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 
 export default function CaseDetailsPage() {
@@ -31,6 +32,12 @@ export default function CaseDetailsPage() {
   const [uploading, setUploading] = useState(false)
   const [hearingDate, setHearingDate] = useState(null)
   const [scheduling, setScheduling] = useState(false)
+  const [showOutcomeDialog, setShowOutcomeDialog] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [outcomeValue, setOutcomeValue] = useState("")
+  const [showViewOutcomeDialog, setShowViewOutcomeDialog] = useState(false)
+  const [viewingEvent, setViewingEvent] = useState(null)
+  const [viewingIndex, setViewingIndex] = useState(null)
   
 
   useEffect(() => {
@@ -164,17 +171,75 @@ export default function CaseDetailsPage() {
   const handleScheduleSubmit = async () => {
     setScheduling(true)
     try {
-      await api.events.create({ caseId: id, date: hearingDate })
+      if (!hearingDate || !caseData) throw new Error("Please select a date and ensure case data is loaded.");
+      // Prepare event payload
+      const start = new Date(hearingDate)
+      const end = new Date(start.getTime() + 60 * 60 * 1000) // 1 hour duration
+      const eventPayload = {
+        title: `Hearing for ${caseData.title || caseData.caseNumber || "Case"}`,
+        start: start.toISOString(),
+        end: end.toISOString(),
+        type: "hearing",
+        case: caseData._id || caseData.id,
+        location: caseData.court || "Courtroom",
+        description: "Scheduled via case details page"
+      }
+      await api.events.create(eventPayload)
       setShowScheduleDialog(false)
       setHearingDate(null)
-      // Optionally refresh events list here
-      toast({ title: "Success", description: "Hearing scheduled." })
+      // Refresh events list
+      const eventsResponse = await api.events.getByCaseId(id)
+      setEvents(eventsResponse)
+      toast({ title: "Success", description: "Event scheduled." })
     } catch (err) {
-      toast({ title: "Error", description: "Failed to schedule hearing." })
+      toast({ title: "Error", description: err.message || "Failed to schedule event." })
     } finally {
       setScheduling(false)
     }
   }
+
+  const handleEditOutcome = (event) => {
+    setEditingEvent(event);
+    setOutcomeValue(event.outcome || "");
+    setShowOutcomeDialog(true);
+  };
+
+  const handleSaveOutcome = async () => {
+    if (!editingEvent) return;
+    try {
+      await api.events.update(editingEvent._id, { ...editingEvent, outcome: outcomeValue });
+      setShowOutcomeDialog(false);
+      setEditingEvent(null);
+      setOutcomeValue("");
+      // Refresh events list
+      const eventsResponse = await api.events.getByCaseId(id);
+      setEvents(eventsResponse);
+      toast({ title: "Success", description: "Outcome updated." });
+    } catch (err) {
+      toast({ title: "Error", description: "Failed to update outcome." });
+    }
+  };
+
+  const handleViewOutcome = (event, idx) => {
+    setViewingEvent(event);
+    setViewingIndex(idx);
+    setShowViewOutcomeDialog(true);
+  };
+
+  // Helper for ordinal numbers
+  const getOrdinal = (n) => {
+    if (n === 1) return 'First';
+    if (n === 2) return 'Second';
+    if (n === 3) return 'Third';
+    if (n === 4) return 'Fourth';
+    if (n === 5) return 'Fifth';
+    if (n === 6) return 'Sixth';
+    if (n === 7) return 'Seventh';
+    if (n === 8) return 'Eighth';
+    if (n === 9) return 'Ninth';
+    if (n === 10) return 'Tenth';
+    return n + 'th';
+  };
 
   if (loading) {
     return (
@@ -264,7 +329,7 @@ export default function CaseDetailsPage() {
                       </p>
                     </div>
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground">Next Hearing</h3>
+                      <h3 className="text-sm font-medium text-muted-foreground">First Hearing</h3>
                       <p className="text-base flex items-center">
                         <Clock className="mr-2 h-4 w-4 text-muted-foreground" />
                         {formatDate(caseData.hearingDate || caseData.nextHearingDate)}
@@ -729,36 +794,73 @@ export default function CaseDetailsPage() {
             <TabsContent value="hearings">
               <Card>
                 <CardHeader>
-                  <CardTitle>Hearings</CardTitle>
-                  <CardDescription>Next hearing and hearing history for this case</CardDescription>
+                  <CardTitle>All Hearings</CardTitle>
+                  <CardDescription>Chronological list of all hearings for this case</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {caseData.nextHearingDate || caseData.hearingDate ? (
-                    <div className="space-y-4">
-                      <div className="flex items-start p-3 border rounded-md">
-                        <div className="mr-3 mt-1">
-                          <Clock className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium">Next Hearing</p>
-                            <Badge className="bg-blue-100 text-blue-800">Upcoming</Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {formatDate(caseData.nextHearingDate || caseData.hearingDate)}
-                          </p>
-                        </div>
+                  {(() => {
+                    // Prepare the hearings list
+                    const firstHearingDate = caseData.hearingDate || caseData.nextHearingDate;
+                    let hearings = events
+                      .filter(e => e.type === 'hearing')
+                      .sort((a, b) => new Date(a.start) - new Date(b.start));
+                    // Check if first hearing date is already in events
+                    const firstHearingExists = hearings.some(e => {
+                      const eventDate = new Date(e.start).toDateString();
+                      const firstDate = firstHearingDate ? new Date(firstHearingDate).toDateString() : null;
+                      return firstDate && eventDate === firstDate;
+                    });
+                    // If not, prepend a virtual hearing for the first hearing
+                    if (firstHearingDate && !firstHearingExists) {
+                      hearings = [
+                        {
+                          _id: 'first-hearing',
+                          start: firstHearingDate,
+                          description: 'Set during case creation',
+                          outcome: '',
+                          isVirtualFirst: true,
+                        },
+                        ...hearings,
+                      ];
+                    }
+                    return hearings.length > 0 ? (
+                      <ul className="space-y-3">
+                        {hearings.map((event, idx) => (
+                          <li key={event._id || idx} className="p-3 border rounded-md flex flex-col md:flex-row md:items-center md:justify-between">
+                            <div className="flex items-center gap-3">
+                              <span className="font-bold mr-2">{idx + 1}.</span>
+                              <Calendar className="h-4 w-4 text-blue-500" />
+                              <span className="font-medium">{event.start ? formatDate(event.start) : 'Not set'}</span>
+                              <span className="ml-2 text-xs text-gray-500">({getOrdinal(idx + 1)} Hearing)</span>
+                            </div>
+                            <div className="flex-1 mt-2 md:mt-0 md:ml-6">
+                              <span className="text-sm text-muted-foreground">{event.description || "No description"}</span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-2 md:mt-0">
+                              <span className="text-xs text-gray-600">Outcome:</span>
+                              <span className="text-sm font-semibold">{event.outcome || "-"}</span>
+                              <Button size="sm" variant="outline" onClick={() => handleViewOutcome(event, idx)}>
+                                View Outcome
+                              </Button>
+                              {isLawyer && !event.isVirtualFirst && (
+                                <Button size="sm" variant="outline" onClick={() => handleEditOutcome(event)}>
+                                  Edit Outcome
+                                </Button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Calendar className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+                        <h3 className="mt-4 text-lg font-medium">No hearings scheduled</h3>
+                        <p className="text-sm text-muted-foreground">
+                          There are no hearings set for this case yet.
+                        </p>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Calendar className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                      <h3 className="mt-4 text-lg font-medium">No hearings scheduled</h3>
-                      <p className="text-sm text-muted-foreground">
-                        There is no next hearing set for this case yet.
-                      </p>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </CardContent>
                 {isLawyer && (
                   <CardFooter>
@@ -794,7 +896,7 @@ export default function CaseDetailsPage() {
                   <span className="text-sm">{formatDate(caseData.filingDate)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-medium">Next Hearing</h3>
+                  <h3 className="text-sm font-medium">First Hearing</h3>
                   <span className="text-sm">{formatDate(caseData.hearingDate || caseData.nextHearingDate)}</span>
                 </div>
                 {caseData.court && (
@@ -887,11 +989,46 @@ export default function CaseDetailsPage() {
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Schedule Hearing</DialogTitle>
+            <DialogTitle>Schedule Next Hearing</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Calendar selected={hearingDate} onSelect={setHearingDate} />
+            <DatePicker
+              mode="single"
+              selected={hearingDate}
+              onSelect={setHearingDate}
+              disabled={(date) => {
+                const firstHearing = caseData.hearingDate ? new Date(caseData.hearingDate) : (caseData.nextHearingDate ? new Date(caseData.nextHearingDate) : null);
+                return firstHearing ? date <= firstHearing : false;
+              }}
+            />
             <Button onClick={handleScheduleSubmit} disabled={scheduling || !hearingDate}>{scheduling ? "Scheduling..." : "Set Hearing Date"}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showOutcomeDialog} onOpenChange={setShowOutcomeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Hearing Outcome</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              type="text"
+              placeholder="Enter outcome"
+              value={outcomeValue}
+              onChange={e => setOutcomeValue(e.target.value)}
+            />
+            <Button onClick={handleSaveOutcome} disabled={!outcomeValue}>Save Outcome</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showViewOutcomeDialog} onOpenChange={setShowViewOutcomeDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>View Outcome{viewingIndex !== null ? `: ${getOrdinal(viewingIndex + 1)} Hearing` : ''}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-base">{viewingEvent?.outcome || "No outcome set for this hearing."}</div>
+            <Button onClick={() => setShowViewOutcomeDialog(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
