@@ -832,10 +832,10 @@ export default function CaseDetailsPage() {
                               <Calendar className="h-4 w-4 text-blue-500" />
                               <span className="font-medium">{event.start ? formatDate(event.start) : 'Not set'}</span>
                               <span className="ml-2 text-xs text-gray-500">({getOrdinal(idx + 1)} Hearing)</span>
-                            </div>
+                        </div>
                             <div className="flex-1 mt-2 md:mt-0 md:ml-6">
                               <span className="text-sm text-muted-foreground">{event.description || "No description"}</span>
-                            </div>
+                          </div>
                             <div className="flex items-center gap-2 mt-2 md:mt-0">
                               <span className="text-xs text-gray-600">Outcome:</span>
                               <span className="text-sm font-semibold">{event.outcome || "-"}</span>
@@ -847,18 +847,18 @@ export default function CaseDetailsPage() {
                                   Edit Outcome
                                 </Button>
                               )}
-                            </div>
+                        </div>
                           </li>
                         ))}
                       </ul>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Calendar className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
-                        <h3 className="mt-4 text-lg font-medium">No hearings scheduled</h3>
-                        <p className="text-sm text-muted-foreground">
+                  ) : (
+                    <div className="text-center py-8">
+                      <Calendar className="mx-auto h-12 w-12 text-muted-foreground opacity-50" />
+                      <h3 className="mt-4 text-lg font-medium">No hearings scheduled</h3>
+                      <p className="text-sm text-muted-foreground">
                           There are no hearings set for this case yet.
-                        </p>
-                      </div>
+                      </p>
+                    </div>
                     );
                   })()}
                 </CardContent>

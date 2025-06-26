@@ -222,37 +222,37 @@ export default function CasesPage() {
                     }
                     if (!clientName) clientName = 'No Client';
                     return (
-                      <tr key={caseItem.id} className="border-b hover:bg-muted/50">
-                        <td className="py-3">
-                          <Link
-                            href={`/dashboard/cases/${caseItem.id}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {caseItem.title}
-                          </Link>
-                        </td>
-                        <td className="py-3">{caseItem.number}</td>
-                        <td className="py-3">{caseItem.type}</td>
+                    <tr key={caseItem.id} className="border-b hover:bg-muted/50">
+                      <td className="py-3">
+                        <Link
+                          href={`/dashboard/cases/${caseItem.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {caseItem.title}
+                        </Link>
+                      </td>
+                      <td className="py-3">{caseItem.number}</td>
+                      <td className="py-3">{caseItem.type}</td>
                         {isLawyer && <td className="py-3">{clientName}</td>}
-                        <td className="py-3">{caseItem.court}</td>
-                        <td className="py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                              caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {caseItem.status}
-                          </span>
-                        </td>
-                        <td className="py-3">
-                          {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
-                        </td>
-                        <td className="py-3 text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
-                          </Button>
-                        </td>
-                      </tr>
+                      <td className="py-3">{caseItem.court}</td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            caseItem.status === "Active" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                          }`}
+                        >
+                          {caseItem.status}
+                        </span>
+                      </td>
+                      <td className="py-3">
+                        {caseItem.nextHearing ? new Date(caseItem.nextHearing).toLocaleDateString() : "N/A"}
+                      </td>
+                      <td className="py-3 text-right">
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link href={`/dashboard/cases/${caseItem.id}`}>View</Link>
+                        </Button>
+                      </td>
+                    </tr>
                     );
                   })
                 ) : (

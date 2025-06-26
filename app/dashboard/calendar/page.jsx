@@ -139,8 +139,10 @@ export default function CalendarPage() {
   const fetchEvents = async () => {
     try {
       const response = await api.events.getAll()
-      if (response && response.data) {
-        const formattedEvents = response.data.map((event) => ({
+      console.log('Raw events response:', response)
+      // response is already an array, not an object with .data
+      if (Array.isArray(response)) {
+        const formattedEvents = response.map((event) => ({
           id: event._id || event.id,
           title: event.title,
           date: event.start ? new Date(event.start).toISOString().split("T")[0] : null,
@@ -154,6 +156,10 @@ export default function CalendarPage() {
           caseId: event.case?._id || "",
         }))
         setEvents(formattedEvents)
+        console.log('Events after fetch:', formattedEvents)
+      } else {
+        setEvents([])
+        console.error('Events fetch did not return an array:', response)
       }
     } catch (error) {
       console.error("Error fetching events:", error)
@@ -234,7 +240,9 @@ export default function CalendarPage() {
       // Log the payload for debugging
       console.log("Sending event payload:", apiEvent)
 
+      console.log('Creating event with payload:', apiEvent);
       const response = await api.events.create(apiEvent)
+      console.log('Backend response after create:', response);
       const dateString = newEvent.date.toISOString().split("T")[0]
       const newEventObj = {
         id: response._id || response.id || `event-${Date.now()}`,
@@ -244,7 +252,6 @@ export default function CalendarPage() {
         case: newEvent.case === "none" ? "" : cases.find((c) => c._id === newEvent.case)?.title || "",
       }
 
-      setEvents((prev) => [...prev, newEventObj])
       setNewEvent({
         title: "",
         date: new Date(),
@@ -255,7 +262,10 @@ export default function CalendarPage() {
         case: "",
       })
       setIsDialogOpen(false)
-      fetchEvents()
+      await fetchEvents()
+      if (events.length === 0) {
+        console.error("No events returned from backend after add. Check backend filtering or save.")
+      }
       toast({
         title: "Event created",
         description: "Your event has been added to the calendar.",
@@ -370,7 +380,6 @@ export default function CalendarPage() {
         case: newEvent.case === "none" ? "" : cases.find((c) => c._id === newEvent.case)?.title || "",
       }
 
-      setEvents((prev) => prev.map((event) => (event.id === selectedEvent.id ? updatedEvent : event)))
       setSelectedEvent(null)
       setNewEvent({
         title: "",
@@ -383,6 +392,10 @@ export default function CalendarPage() {
       })
       setIsDialogOpen(false)
       setIsEditMode(false)
+      await fetchEvents()
+      if (events.length === 0) {
+        console.error("No events returned from backend after update. Check backend filtering or save.")
+      }
       toast({
         title: "Event updated",
         description: "Your event has been updated successfully.",
@@ -402,9 +415,12 @@ export default function CalendarPage() {
     if (!selectedEvent) return
     try {
       await api.events.delete(selectedEvent.id)
-      setEvents((prev) => prev.filter((event) => event.id !== selectedEvent.id))
       setSelectedEvent(null)
       setShowDeleteDialog(false)
+      await fetchEvents()
+      if (events.length === 0) {
+        console.error("No events returned from backend after delete. Check backend filtering or save.")
+      }
       toast({
         title: "Event deleted",
         description: "Your event has been deleted successfully.",
@@ -466,18 +482,17 @@ export default function CalendarPage() {
   }, [viewMode])
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Calendar</h1>
         <div className="flex items-center space-x-2">
           <Select value={viewMode} onValueChange={setViewMode}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[120px]">
               <SelectValue placeholder="View" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="month">Month</SelectItem>
               <SelectItem value="week">Week</SelectItem>
-              <SelectItem value="day">Day</SelectItem>
             </SelectContent>
           </Select>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -606,162 +621,161 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-3">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <h2 className="text-xl font-bold">
-                    {monthNames[currentMonth]} {currentYear}
-                  </h2>
-                  <Button variant="outline" size="icon" onClick={goToNextMonth}>
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="icon" onClick={goToPreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <h2 className="text-xl font-bold">
+                {monthNames[currentMonth]} {currentYear}
+              </h2>
+              <Button variant="outline" size="icon" onClick={goToNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
+              Today
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {viewMode === 'month' ? (
+            <div className="grid grid-cols-7 gap-1">
+              {dayNames.map((day) => (
+                <div key={day} className="text-center font-medium py-2">
+                  {day}
                 </div>
-                <Button variant="outline" onClick={() => setCurrentDate(new Date())}>
-                  Today
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1">
-                {dayNames.map((day) => (
-                  <div key={day} className="text-center font-medium py-2">
-                    {day}
-                  </div>
-                ))}
-                {calendarDays.map((day, index) => (
+              ))}
+              {calendarDays.map((day, index) => (
+                <div
+                  key={index}
+                  className={`min-h-[100px] border rounded-md p-1 ${
+                    day.day === null
+                      ? "bg-muted/20"
+                      : day.dateString === new Date().toISOString().split("T")[0]
+                        ? "bg-primary/10 border-primary"
+                        : ""
+                  }`}
+                >
+                  {day.day !== null && (
+                    <>
+                      <div className="flex justify-between items-center p-1">
+                        <div className="text-sm font-medium">{day.day}</div>
+                        {isLawyer && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                            onClick={() => {
+                              setNewEvent((prev) => ({
+                                ...prev,
+                                date: day.date,
+                              }))
+                              setIsDialogOpen(true)
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {day.events && day.events.length > 0
+                          ? day.events.map((event) => (
+                              <div
+                                key={event.id}
+                                className={`text-xs p-1 rounded border truncate cursor-pointer ${getEventColor(event.type)}`}
+                                title={event.title}
+                                onClick={() => (isLawyer ? editEvent(event) : null)}
+                              >
+                                {event.time && `${event.time} - `}
+                                {event.title}
+                              </div>
+                            ))
+                          : null}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // WEEK VIEW
+            <div className="grid grid-cols-7 gap-1">
+              {dayNames.map((day) => (
+                <div key={day} className="text-center font-medium py-2">
+                  {day}
+                </div>
+              ))}
+              {/* Only show days for the current week */}
+              {(() => {
+                const today = new Date(currentYear, currentMonth, currentDate.getDate())
+                const weekStart = new Date(today)
+                weekStart.setDate(today.getDate() - today.getDay())
+                const weekDays = []
+                for (let i = 0; i < 7; i++) {
+                  const date = new Date(weekStart)
+                  date.setDate(weekStart.getDate() + i)
+                  const dateString = date.toISOString().split("T")[0]
+                  const dayEvents = events.filter((event) => event.date === dateString)
+                  weekDays.push({
+                    day: date.getDate(),
+                    date,
+                    dateString,
+                    events: dayEvents,
+                  })
+                }
+                return weekDays.map((day, index) => (
                   <div
                     key={index}
                     className={`min-h-[100px] border rounded-md p-1 ${
-                      day.day === null
-                        ? "bg-muted/20"
-                        : day.dateString === new Date().toISOString().split("T")[0]
-                          ? "bg-primary/10 border-primary"
-                          : ""
+                      day.dateString === new Date().toISOString().split("T")[0]
+                        ? "bg-primary/10 border-primary"
+                        : ""
                     }`}
                   >
-                    {day.day !== null && (
-                      <>
-                        <div className="flex justify-between items-center p-1">
-                          <div className="text-sm font-medium">{day.day}</div>
-                          {isLawyer && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                              onClick={() => {
-                                setNewEvent((prev) => ({
-                                  ...prev,
-                                  date: day.date,
-                                }))
-                                setIsDialogOpen(true)
-                              }}
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          {day.events && day.events.length > 0
-                            ? day.events.map((event) => (
-                                <div
-                                  key={event.id}
-                                  className={`text-xs p-1 rounded border truncate cursor-pointer ${getEventColor(event.type)}`}
-                                  title={event.title}
-                                  onClick={() => (isLawyer ? editEvent(event) : null)}
-                                >
-                                  {event.time && `${event.time} - `}
-                                  {event.title}
-                                </div>
-                              ))
-                            : null}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Events</CardTitle>
-              <CardDescription>Your schedule for the next 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {events
-                  .filter((event) => {
-                    // Use IST (Asia/Kolkata) for today (set to 22nd June 2024 for demo)
-                    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-                    const todayIST = new Date(Date.UTC(2024, 5, 22, 0, 0, 0));
-                    const sevenDaysLaterIST = new Date(todayIST.getTime() + 7 * 24 * 60 * 60 * 1000);
-                    const eventDate = new Date(new Date(event.date).getTime() + IST_OFFSET);
-                    return eventDate >= todayIST && eventDate <= sevenDaysLaterIST;
-                  })
-                  .sort((a, b) => new Date(a.date) - new Date(b.date))
-                  .map((event) => (
-                    <div key={event.id} className={`flex items-center justify-between border-b pb-3 last:border-0 last:pb-0`}>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
-                          <p className="font-medium inline">{event.title}</p>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{event.case}</p>
-                        <p className="text-xs text-muted-foreground">{event.court}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
-                        <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
-                      </div>
+                    <div className="flex justify-between items-center p-1">
+                      <div className="text-sm font-medium">{day.day}</div>
+                      {isLawyer && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                          onClick={() => {
+                            setNewEvent((prev) => ({
+                              ...prev,
+                              date: day.date,
+                            }))
+                            setIsDialogOpen(true)
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
-                  ))}
-                {events.filter((event) => {
-                  const IST_OFFSET = 5.5 * 60 * 60 * 1000;
-                  const todayIST = new Date(Date.UTC(2024, 5, 22, 0, 0, 0));
-                  const sevenDaysLaterIST = new Date(todayIST.getTime() + 7 * 24 * 60 * 60 * 1000);
-                  const eventDate = new Date(new Date(event.date).getTime() + IST_OFFSET);
-                  return eventDate >= todayIST && eventDate <= sevenDaysLaterIST;
-                }).length === 0 && (
-                  <div className="text-center py-6">
-                    <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground">No upcoming events</p>
+                    <div className="space-y-1">
+                      {day.events && day.events.length > 0
+                        ? day.events.map((event) => (
+                            <div
+                              key={event.id}
+                              className={`text-xs p-1 rounded border truncate cursor-pointer ${getEventColor(event.type)}`}
+                              title={event.title}
+                              onClick={() => (isLawyer ? editEvent(event) : null)}
+                            >
+                              {event.time && `${event.time} - `}
+                              {event.title}
+                            </div>
+                          ))
+                        : null}
+                    </div>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Calendar Tips</CardTitle>
-              <CardDescription>Make the most of your schedule</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="relative h-40 w-full">
-                <Image src="/images/bg_3.jpg" alt="Scales of justice" fill className="object-cover rounded-md" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Scheduling Best Practices</h3>
-                <ul className="text-sm space-y-1 list-disc pl-4">
-                  <li>Schedule court dates as soon as they're confirmed</li>
-                  <li>Block preparation time before hearings</li>
-                  <li>Set reminders for filing deadlines</li>
-                  <li>Color-code events by type for easy recognition</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                ))
+              })()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
