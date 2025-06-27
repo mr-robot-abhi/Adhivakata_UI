@@ -241,22 +241,11 @@ import CaseStatisticsChart from "@/components/dashboard/CaseStatisticsChart";
 
 function LawyerDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {}
-
-  // Stat values (dynamic, fallback to 0)
   const totalCases = summary?.totalCases || 0;
   const pendingTasks = summary?.urgentCases || 0;
   const activeCases = summary?.activeCases || 0;
-
-  // Bar chart data
-  const barChartData = [
-    { label: 'Open Cases', value: summary?.openCases || 0 },
-    { label: 'Closed Cases', value: summary?.closedCases || 0 },
-    { label: 'Pending Cases', value: summary?.pendingCases || 0 }
-  ];
-
   return (
     <>
-      {/* Stat Boxes */}
       <DashboardStats
         totalCases={totalCases}
         pendingTasks={pendingTasks}
@@ -265,67 +254,35 @@ function LawyerDashboard({ data }) {
         totalCasesDesc="Total cases managed"
         pendingTasksDesc="Requires immediate attention"
         activeThirdPartyDesc="Currently active cases"
+        className="text-base [&_.text-3xl]:text-2xl"
       />
-
-      {/* Bar Chart & Upcoming Events Section */}
-      <div className="grid gap-6 md:grid-cols-2 mt-8">
-        {/* Bar Chart Section */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Case Statistics</CardTitle>
-            <CardDescription>Open, Closed, and Pending Cases</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CaseStatisticsChart 
-              data={[
-                { name: "Active", value: summary?.activeCases || 0 },
-                { name: "Total", value: summary?.totalCases || 0 }
-              ]} 
-            />
-          </CardContent>
-        </Card>
-        {/* Upcoming Events Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Your schedule for the next 7 days</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {upcomingEvents?.length > 0 ? (
-                upcomingEvents.map((event, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+      <Card className="mt-8 shadow-md">
+        <CardContent>
+          <div className="max-h-96 overflow-y-auto pr-2">
+            {upcomingEvents?.length > 0 ? (
+              upcomingEvents
+                .sort((a, b) => new Date(a.start || a.date) - new Date(b.start || b.date))
+                .map((event, index) => (
+                  <div key={event.id || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type?.replace('_', ' ')}</span>
                         <p className="font-medium inline">{event.title}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{event.case}</p>
-                      <p className="text-xs text-muted-foreground">{event.court}</p>
+                      <p className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
-                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
+                      <p className="text-sm font-medium">{event.start ? new Date(event.start).toLocaleDateString() : event.date || ''}</p>
+                      <p className="text-xs text-muted-foreground">{event.start ? new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
                     </div>
                   </div>
                 ))
-              ) : (
-                <div className="text-center py-6">
-                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No upcoming events</p>
-                  <Link href="/dashboard/calendar">
-                    <Button variant="outline" className="mt-2">
-                      Schedule an Event
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Cases Section */}
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">No events found.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       <Card className="mt-8 shadow-md">
         <CardHeader>
           <CardTitle>Recent Cases</CardTitle>
@@ -436,24 +393,13 @@ function LawyerDashboard({ data }) {
   )
 }
 
-
 function ClientDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {};
-
-  // Stat values (dynamic, fallback to 0)
   const totalCases = summary?.totalCases || 0;
   const pendingTasks = summary?.urgentCases || 0;
   const activeCases = summary?.activeCases || 0;
-
-  // Bar chart data (same as lawyer)
-  const barChartData = [
-    { name: 'Active', value: summary?.activeCases || 0 },
-    { name: 'Total', value: summary?.totalCases || 0 }
-  ];
-
   return (
     <>
-      {/* Stat Boxes */}
       <DashboardStats
         totalCases={totalCases}
         pendingTasks={pendingTasks}
@@ -462,62 +408,35 @@ function ClientDashboard({ data }) {
         totalCasesDesc="Total cases managed"
         pendingTasksDesc="Requires immediate attention"
         activeThirdPartyDesc="Currently active cases"
+        className="text-base [&_.text-3xl]:text-2xl"
       />
-
-      {/* Bar Chart & Upcoming Events Section (same as lawyer) */}
-      <div className="grid gap-6 md:grid-cols-2 mt-8">
-        {/* Bar Chart Section */}
-        <Card className="shadow-md">
-          <CardHeader>
-            <CardTitle>Case Statistics</CardTitle>
-            <CardDescription>Open, Closed, and Pending Cases</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <CaseStatisticsChart data={barChartData} />
-          </CardContent>
-        </Card>
-        {/* Upcoming Events Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Your schedule for the next 7 days</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {upcomingEvents?.length > 0 ? (
-                upcomingEvents.map((event, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
+      <Card className="mt-8 shadow-md">
+        <CardContent>
+          <div className="max-h-96 overflow-y-auto pr-2">
+            {upcomingEvents?.length > 0 ? (
+              upcomingEvents
+                .sort((a, b) => new Date(a.start || a.date) - new Date(b.start || b.date))
+                .map((event, index) => (
+                  <div key={event.id || index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type.replace('_', ' ')}</span>
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type?.replace('_', ' ')}</span>
                         <p className="font-medium inline">{event.title}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{event.case}</p>
-                      <p className="text-xs text-muted-foreground">{event.court}</p>
+                      <p className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{event.date?.split(",")[0]}</p>
-                      <p className="text-sm text-muted-foreground">{event.date?.split(",")[1]}</p>
+                      <p className="text-sm font-medium">{event.start ? new Date(event.start).toLocaleDateString() : event.date || ''}</p>
+                      <p className="text-xs text-muted-foreground">{event.start ? new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
                     </div>
                   </div>
                 ))
-              ) : (
-                <div className="text-center py-6">
-                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">No upcoming events</p>
-                  <Link href="/dashboard/calendar">
-                    <Button variant="outline" className="mt-2">
-                      Schedule an Event
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Cases Table */}
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">No events found.</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       <Card className="mt-8 shadow-md">
         <CardHeader>
           <CardTitle>Recent Cases</CardTitle>
@@ -584,7 +503,6 @@ function ClientDashboard({ data }) {
         </CardContent>
       </Card>
 
-      {/* Case Management Tips (now for all users) */}
       <div className="relative overflow-hidden rounded-lg border bg-background p-6 mt-8">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-4">
