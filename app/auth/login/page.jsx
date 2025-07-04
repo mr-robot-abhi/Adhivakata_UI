@@ -8,13 +8,15 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
       <div className="grid w-full max-w-[1000px] grid-cols-1 md:grid-cols-2 gap-8 rounded-lg border bg-background shadow">
         <div className="flex flex-col justify-center p-8">
-          <div className="flex items-center gap-2 mb-8">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
-                A
-              </div>
-              <h1 className="text-2xl font-bold">Adhivakta</h1>
-            </Link>
+          <div className="flex justify-center items-center my-8">
+            <Image
+              src="/adhi_logo1.jpg"
+              alt="Adhivakta Logo"
+              width={120}
+              height={120}
+              className="rounded-full object-cover border-2 border-gray-300 shadow-lg"
+              style={{objectPosition:'center', width:'120px', height:'120px'}}
+            />
           </div>
           <Card>
             <CardHeader>

@@ -102,10 +102,14 @@ export default function Home() {
           transition={{ duration: 0.5 }}
           className="flex items-center gap-3"
         >
-          <div className="h-9 w-9 rounded-full bg-black flex items-center justify-center text-white font-bold shadow-md">
-            A
-          </div>
-          <span className="text-2xl font-semibold tracking-tight text-gray-900">Adhivakta</span>
+          <Image
+            src="/adhi_logo1.jpg"
+            alt="Adhivakta Logo"
+            width={48}
+            height={48}
+            className="rounded-full object-cover border-2 border-gray-300 shadow-lg"
+            style={{objectPosition:'center', width:'48px', height:'48px'}}
+          />
         </motion.div>
         <nav className="ml-auto flex items-center gap-6">
           {[

@@ -36,13 +36,10 @@ export default function Sidebar() {
   const navItems = isLawyer ? getLawyerNavItems() : getClientNavItems()
 
   return (
-    <div className="flex h-full w-64 flex-col border-r bg-background">
+    <div className="flex h-full w-48 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            A
-          </div>
-          <h1 className="text-xl font-bold">Adhivakta</h1>
+          <img src="/adhi_logo1.jpg" alt="Adhivakta Logo" className="h-14 w-14 rounded-full object-cover border-2 border-gray-300 shadow-lg" style={{objectPosition:'center', width:'56px', height:'56px'}} />
         </Link>
       </div>
 

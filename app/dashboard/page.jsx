@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/context/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { CalendarIcon, FileTextIcon, BarChart3Icon, ClockIcon, AlertCircleIcon, FolderOpen, Users } from "lucide-react";
+import { CalendarIcon, FileTextIcon, BarChart3Icon, ClockIcon, AlertCircleIcon, FolderOpen, Users, Eye } from "lucide-react";
 import {
   BarChart,
   Bar,
@@ -99,20 +99,6 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          {/* Show Refresh button if not loading and not new user */}
-          {!loading && !isNewUser && (
-            <button
-              onClick={() => {
-                setLoading(true);
-                fetchDashboardData();
-              }}
-              className="ml-2 px-3 py-1 border rounded text-sm bg-white hover:bg-gray-100 border-gray-300"
-              title="Refresh Dashboard"
-              type="button"
-            >
-              Refresh
-            </button>
-          )}
         </div>
         <div className="text-sm text-muted-foreground">Welcome, {user?.name || "User"}</div>
       </div>
@@ -258,6 +244,7 @@ function LawyerDashboard({ data }) {
       />
       <Card className="mt-8 shadow-md">
         <CardContent>
+          <h3 className="text-lg font-bold mb-4">Upcoming Events</h3>
           <div className="max-h-96 overflow-y-auto pr-2">
             {upcomingEvents?.length > 0 ? (
               upcomingEvents
@@ -269,7 +256,14 @@ function LawyerDashboard({ data }) {
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type?.replace('_', ' ')}</span>
                         <p className="font-medium inline">{event.title}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</p>
+                      <p className="text-sm text-muted-foreground">{event.caseId || event.case_id ? (
+  <Link href={`/dashboard/cases/${event.caseId || event.case_id}`}
+    className="text-sm text-blue-600 hover:underline">
+    {event.case || event.caseTitle || ''}
+  </Link>
+) : (
+  <span className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</span>
+)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium">{event.start ? new Date(event.start).toLocaleDateString() : event.date || ''}</p>
@@ -412,6 +406,7 @@ function ClientDashboard({ data }) {
       />
       <Card className="mt-8 shadow-md">
         <CardContent>
+          <h3 className="text-lg font-bold mb-4">Upcoming Events</h3>
           <div className="max-h-96 overflow-y-auto pr-2">
             {upcomingEvents?.length > 0 ? (
               upcomingEvents
@@ -423,11 +418,25 @@ function ClientDashboard({ data }) {
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize`}>{event.type?.replace('_', ' ')}</span>
                         <p className="font-medium inline">{event.title}</p>
                       </div>
-                      <p className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</p>
+                      <p className="text-sm text-muted-foreground">{event.caseId || event.case_id ? (
+  <Link href={`/dashboard/cases/${event.caseId || event.case_id}`}
+    className="text-sm text-blue-600 hover:underline">
+    {event.case || event.caseTitle || ''}
+  </Link>
+) : (
+  <span className="text-sm text-muted-foreground">{event.case || event.caseTitle || ''}</span>
+)}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{event.start ? new Date(event.start).toLocaleDateString() : event.date || ''}</p>
-                      <p className="text-xs text-muted-foreground">{event.start ? new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+                    <div className="flex items-center gap-2 text-right">
+                      <div>
+                        <p className="text-sm font-medium">{event.start ? new Date(event.start).toLocaleDateString() : event.date || ''}</p>
+                        <p className="text-xs text-muted-foreground">{event.start ? new Date(event.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</p>
+                      </div>
+                      { (event.caseId || event.case_id) && (
+                        <Link href={`/dashboard/cases/${event.caseId || event.case_id}`} className="ml-2 text-blue-600 hover:text-blue-800" title="View Case Details">
+                          <Eye className="w-5 h-5" />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 ))

@@ -529,6 +529,32 @@ const api = {
       return data || []
     },
   },
+
+  notifications: {
+    getAll: async () => {
+      const response = await fetch(`${API_URL}/notifications`, {
+        method: "GET",
+        headers: createHeaders(),
+      });
+      const data = await handleResponse(response);
+      return data.data || [];
+    },
+    markAsRead: async (id) => {
+      const response = await fetch(`${API_URL}/notifications/${id}/read`, {
+        method: "PATCH",
+        headers: createHeaders(),
+      });
+      const data = await handleResponse(response);
+      return data.data;
+    },
+    delete: async (id) => {
+      const response = await fetch(`${API_URL}/notifications/${id}`, {
+        method: "DELETE",
+        headers: createHeaders(),
+      });
+      return handleResponse(response);
+    },
+  },
 }
 
 // Add this function to ensure consistent case data structure
