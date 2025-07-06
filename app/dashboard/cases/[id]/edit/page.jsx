@@ -175,7 +175,23 @@ export default function EditCasePage() {
   };
 
   const handleDateChange = (name, value) => {
-    setCaseData((prev) => ({ ...prev, [name]: value }));
+    setCaseData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      // Validate that next hearing date is after filing date
+      if (name === 'nextHearingDate' && newData.filingDate && value) {
+        if (new Date(value) <= new Date(newData.filingDate)) {
+          toast({
+            title: "Validation Error",
+            description: "First hearing date must be after the filing date",
+            variant: "destructive",
+          });
+          return prev; // Don't update if validation fails
+        }
+      }
+      
+      return newData;
+    });
   };
 
   const handleCheckboxChange = (name, value) => {
@@ -295,17 +311,32 @@ export default function EditCasePage() {
         },
         ...(isLawyer 
           ? {
-              advocates: (caseData.advocates || []).map(adv => ({
-                name: adv.name,
-                email: adv.email || "",
-                contact: adv.contact || "",
-                company: adv.company || "",
-                gst: adv.gst || "",
-                isLead: adv.isLead || false,
-                level: adv.level || "",
-                poc: adv.poc || "",
-                spock: adv.spock || ""
-              })),
+              // Ensure at least one lawyer (the logged-in user) is always included
+              lawyers: (caseData.lawyers && caseData.lawyers.length > 0) 
+                ? caseData.lawyers.map(lawyer => ({
+                    name: lawyer.name,
+                    email: lawyer.email || "",
+                    contact: lawyer.contact || "",
+                    company: lawyer.company || "",
+                    gst: lawyer.gst || "",
+                    role: lawyer.role || "associate",
+                    position: lawyer.position || "supporting",
+                    isPrimary: lawyer.isPrimary || false,
+                    level: lawyer.level || "Senior",
+                    chairPosition: lawyer.chairPosition || "supporting",
+                    addedBy: user._id
+                  }))
+                : [{
+                    name: user.name,
+                    email: user.email || "",
+                    contact: user.phone || "",
+                    role: "lead",
+                    position: "first_chair",
+                    isPrimary: true,
+                    level: "Senior",
+                    chairPosition: "first_chair",
+                    addedBy: user._id
+                  }],
               clients: (caseData.clients || []).map(client => ({
                 name: client.name,
                 email: client.email || "",
@@ -1237,6 +1268,7 @@ export default function EditCasePage() {
                                   company: '',
                                   gst: '',
                                   level: 'Associate',
+                                  addedBy: user._id
                                 }
                               ]
                             }))} 

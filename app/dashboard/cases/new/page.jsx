@@ -265,7 +265,23 @@ export default function NewCasePage() {
   }
 
   const handleDateChange = (name, date) => {
-    setCaseData((prev) => ({ ...prev, [name]: date }))
+    setCaseData((prev) => {
+      const newData = { ...prev, [name]: date };
+      
+      // Validate that next hearing date is after filing date
+      if (name === 'nextHearingDate' && newData.filingDate && date) {
+        if (new Date(date) <= new Date(newData.filingDate)) {
+          toast({
+            title: "Validation Error",
+            description: "First hearing date must be after the filing date",
+            variant: "destructive",
+          });
+          return prev; // Don't update if validation fails
+        }
+      }
+      
+      return newData;
+    });
   }
 
   const handleCheckboxChange = (name, checked) => {
@@ -418,6 +434,32 @@ export default function NewCasePage() {
       }
     }
 
+    // Validate lawyers if lawyer is creating the case
+    if (isLawyer && (section === 'all' || section === 'associatedParties')) {
+      // Ensure at least one lawyer is present
+      if (!caseData.lawyers || caseData.lawyers.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please add at least one lawyer to the case.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate lawyer names
+      for (let i = 0; i < caseData.lawyers.length; i++) {
+        const lawyer = caseData.lawyers[i];
+        if (!lawyer.name || lawyer.name.trim() === '') {
+          toast({
+            title: "Error",
+            description: `Please enter a name for Lawyer ${i + 1}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+    }
+
     // Validate associated clients if lawyer is creating the case
     if (isLawyer && (section === 'all' || section === 'associatedParties')) {
       if (!caseData.clients || caseData.clients.length === 0) {
@@ -517,18 +559,33 @@ export default function NewCasePage() {
         // Set advocates and clients based on user role
         ...(isLawyer 
           ? {
-              // For lawyers, they can add other lawyers as advocates
-              advocates: (caseData.advocates || []).map(adv => ({
-                name: adv.name,
-                email: adv.email || "",
-                contact: adv.contact || "",
-                company: adv.company || "",
-                gst: adv.gst || "",
-                isLead: adv.isLead || false,
-                level: adv.level || "",
-                poc: adv.poc || "",
-                spock: adv.spock || ""
-              })),
+              // For lawyers, they can add other lawyers to the legal team
+              // Ensure at least one lawyer (the logged-in user) is always included
+              lawyers: (caseData.lawyers && caseData.lawyers.length > 0) 
+                ? caseData.lawyers.map(lawyer => ({
+                    name: lawyer.name,
+                    email: lawyer.email || "",
+                    contact: lawyer.contact || "",
+                    company: lawyer.company || "",
+                    gst: lawyer.gst || "",
+                    role: lawyer.role || "associate",
+                    position: lawyer.position || "supporting",
+                    isPrimary: lawyer.isPrimary || false,
+                    level: lawyer.level || "Senior",
+                    chairPosition: lawyer.chairPosition || "supporting",
+                    addedBy: user._id
+                  }))
+                : [{
+                    name: user.name,
+                    email: user.email || "",
+                    contact: user.phone || "",
+                    role: "lead",
+                    position: "first_chair",
+                    isPrimary: true,
+                    level: "Senior",
+                    chairPosition: "first_chair",
+                    addedBy: user._id
+                  }],
               // Add clients
               clients: (caseData.clients || []).map(client => ({
                 name: client.name,
@@ -581,6 +638,9 @@ export default function NewCasePage() {
         )
       };
 
+      // Debug log the formatted data
+      console.log('Sending formatted data:', JSON.stringify(formattedData, null, 2));
+      
       let response;
       
       if (caseData._id) {
@@ -594,6 +654,8 @@ export default function NewCasePage() {
       if (response.error) {
         throw new Error(response.error);
       }
+
+
 
       // If this is a partial save, update the local state with the saved data
       if (section !== 'all') {
@@ -614,8 +676,13 @@ export default function NewCasePage() {
           description: "Case created successfully",
         });
         
-        // Redirect to the newly created case
-        router.push('/dashboard');
+        // Redirect to the newly created case details page
+        const caseId = response.data?.case?._id || response.data?._id || response._id;
+        if (caseId) {
+          router.push(`/dashboard/cases/${caseId}`);
+        } else {
+          router.push('/dashboard/cases');
+        }
       }
       
       return response;
@@ -1595,7 +1662,8 @@ export default function NewCasePage() {
                                 gst: '',
                                 level: 'Associate',
                                 chairPosition: 'supporting',
-                                isPrimary: (prev.lawyers || []).length === 0 // Set as primary if first lawyer
+                                isPrimary: (prev.lawyers || []).length === 0, // Set as primary if first lawyer
+                                addedBy: user._id
                               }
                             ]
                           }))} 

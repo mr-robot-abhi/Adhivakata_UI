@@ -11,8 +11,9 @@ import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, Calendar, Clock, FileText, MapPin, User, Users, AlertTriangle, CheckCircle } from "lucide-react"
 import api from "@/services/api"
 import PartyDetails from "@/components/ui/party-details"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Calendar as DatePicker } from "@/components/ui/calendar"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
@@ -38,6 +39,9 @@ export default function CaseDetailsPage() {
   const [showViewOutcomeDialog, setShowViewOutcomeDialog] = useState(false)
   const [viewingEvent, setViewingEvent] = useState(null)
   const [viewingIndex, setViewingIndex] = useState(null)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteConfirmation, setDeleteConfirmation] = useState("")
+  const [deleting, setDeleting] = useState(false)
   
 
   useEffect(() => {
@@ -241,6 +245,37 @@ export default function CaseDetailsPage() {
     return n + 'th';
   };
 
+  const handleDeleteCase = async () => {
+    if (deleteConfirmation !== caseData.title) {
+      toast({
+        title: "Error",
+        description: "Case title does not match. Please enter the exact case title to confirm deletion.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await api.cases.delete(id);
+      toast({
+        title: "Success",
+        description: "Case deleted successfully.",
+      });
+      router.push('/dashboard/cases');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete case.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+      setDeleteConfirmation("");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-full">
@@ -259,6 +294,8 @@ export default function CaseDetailsPage() {
   }
 
   const isLawyer = user?.role === "lawyer"
+  
+
 
   return (
     <div className="space-y-6">
@@ -269,7 +306,10 @@ export default function CaseDetailsPage() {
           </Button>
           <h1 className="text-3xl font-bold">{caseData.title}</h1>
         </div>
-        {isLawyer && <Button onClick={() => router.push(`/dashboard/cases/${id}/edit`)}>Edit Case</Button>}
+        {((isLawyer && (caseData?.lawyer?._id === user?.id || caseData?.lawyer === user?.id)) || 
+          (user?.role === 'client' && (caseData?.client?._id === user?.id || caseData?.client === user?.id))) && (
+          <Button onClick={() => router.push(`/dashboard/cases/${id}/edit`)}>Edit Case</Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -826,7 +866,7 @@ export default function CaseDetailsPage() {
                     return hearings.length > 0 ? (
                       <ul className="space-y-3">
                         {hearings.map((event, idx) => (
-                          <li key={event._id || idx} className="p-3 border rounded-md flex flex-col md:flex-row md:items-center md:justify-between">
+                          <li key={event._id || `hearing-${idx}`} className="p-3 border rounded-md flex flex-col md:flex-row md:items-center md:justify-between">
                             <div className="flex items-center gap-3">
                               <span className="font-bold mr-2">{idx + 1}.</span>
                               <Calendar className="h-4 w-4 text-blue-500" />
@@ -842,7 +882,8 @@ export default function CaseDetailsPage() {
                               <Button size="sm" variant="outline" onClick={() => handleViewOutcome(event, idx)}>
                                 View Outcome
                               </Button>
-                              {isLawyer && !event.isVirtualFirst && (
+                              {((isLawyer && (caseData?.lawyer?._id === user?.id || caseData?.lawyer === user?.id)) || 
+                                (user?.role === 'client' && (caseData?.client?._id === user?.id || caseData?.client === user?.id))) && !event.isVirtualFirst && (
                                 <Button size="sm" variant="outline" onClick={() => handleEditOutcome(event)}>
                                   Edit Outcome
                                 </Button>
@@ -862,7 +903,8 @@ export default function CaseDetailsPage() {
                     );
                   })()}
                 </CardContent>
-                {isLawyer && (
+                {((isLawyer && (caseData?.lawyer?._id === user?.id || caseData?.lawyer === user?.id)) || 
+                  (user?.role === 'client' && (caseData?.client?._id === user?.id || caseData?.client === user?.id))) && (
                   <CardFooter>
                     <div className="flex gap-2">
                       <Button onClick={() => setShowScheduleDialog(true)} variant="secondary">Schedule Hearing</Button>
@@ -950,7 +992,8 @@ export default function CaseDetailsPage() {
                 </>
               )}
             </CardContent>
-            {isLawyer && (
+            {((isLawyer && (caseData?.lawyer?._id === user?.id || caseData?.lawyer === user?.id)) || 
+              (user?.role === 'client' && (caseData?.client?._id === user?.id || caseData?.client === user?.id))) && (
               <CardFooter className="flex flex-col space-y-2">
                 <Button className="w-full" variant="outline" onClick={() => router.push(`/dashboard/cases/${id}/edit`)}>
                   Edit Case
@@ -968,6 +1011,13 @@ export default function CaseDetailsPage() {
                   onClick={() => router.push(`/dashboard/calendar/new?caseId=${id}`)}
                 >
                   Schedule Hearing
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  Delete Case
                 </Button>
               </CardFooter>
             )}
@@ -1029,6 +1079,54 @@ export default function CaseDetailsPage() {
           <div className="space-y-4">
             <div className="text-base">{viewingEvent?.outcome || "No outcome set for this hearing."}</div>
             <Button onClick={() => setShowViewOutcomeDialog(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Case</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the case and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center">
+                <AlertTriangle className="h-5 w-5 text-red-600 mr-2" />
+                <div>
+                  <h4 className="font-medium text-red-800">Warning</h4>
+                  <p className="text-sm text-red-700 mt-1">
+                    Deleting this case will permanently remove all case data, documents, and hearing records. 
+                    This action is not reversible.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirmation">
+                To confirm deletion, please type the exact case title: <strong>{caseData.title}</strong>
+              </Label>
+              <Input
+                id="delete-confirmation"
+                type="text"
+                placeholder="Enter case title to confirm"
+                value={deleteConfirmation}
+                onChange={(e) => setDeleteConfirmation(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteCase}
+                disabled={deleting || deleteConfirmation !== caseData.title}
+              >
+                {deleting ? "Deleting..." : "Delete Case Permanently"}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

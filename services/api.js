@@ -109,7 +109,7 @@ const api = {
     },
 
     changePassword: async (passwordData) => {
-      const response = await fetch(`${API_URL}/users/change-password`, {
+      const response = await fetch(`${API_URL}/profile/change-password`, {
         method: "POST",
         headers: createHeaders(),
         body: JSON.stringify(passwordData),
@@ -119,7 +119,7 @@ const api = {
     },
 
     updateAppearance: async (appearanceSettings) => {
-      const response = await fetch(`${API_URL}/users/appearance`, {
+      const response = await fetch(`${API_URL}/profile/appearance`, {
         method: "PUT",
         headers: createHeaders(),
         body: JSON.stringify(appearanceSettings),
@@ -129,7 +129,7 @@ const api = {
     },
 
     updateNotifications: async (notificationSettings) => {
-      const response = await fetch(`${API_URL}/users/notifications`, {
+      const response = await fetch(`${API_URL}/profile/notifications`, {
         method: "PUT",
         headers: createHeaders(),
         body: JSON.stringify(notificationSettings),
@@ -139,7 +139,7 @@ const api = {
     },
 
     updateSecurity: async (securitySettings) => {
-      const response = await fetch(`${API_URL}/users/security`, {
+      const response = await fetch(`${API_URL}/profile/security`, {
         method: "PUT",
         headers: createHeaders(),
         body: JSON.stringify(securitySettings),
