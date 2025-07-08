@@ -187,6 +187,18 @@ export default function SettingsPage() {
     }
   }
 
+  // Enhanced: Persist theme change immediately
+  const handleThemeChange = async (value) => {
+    setAppearanceSettings((prev) => ({ ...prev, theme: value }))
+    setTheme(value)
+    try {
+      await api.users.updateAppearance({ ...appearanceSettings, theme: value })
+      setSuccessMessage("Theme preference saved!")
+    } catch (error) {
+      setErrorMessage("Failed to save theme preference.")
+    }
+  }
+
   // Function to apply font size to the document
   const applyFontSize = (size) => {
     const html = document.documentElement
@@ -737,7 +749,7 @@ export default function SettingsPage() {
                   <h3 className="text-sm font-medium">Theme</h3>
                   <RadioGroup
                     value={appearanceSettings.theme}
-                    onValueChange={(value) => handleAppearanceChange("theme", value)}
+                    onValueChange={handleThemeChange}
                     className="grid grid-cols-3 gap-4"
                   >
                     <div>
