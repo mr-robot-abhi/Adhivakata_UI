@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, Bell, Shield, Mail } from "lucide-react"
+import { Loader2, Bell, Shield, Mail, Pencil } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import api from "@/services/api"
 import { useTheme } from "next-themes"
@@ -31,6 +31,7 @@ export default function SettingsPage() {
     specialization: "",
     yearsOfExperience: "",
   })
+  const [isEditing, setIsEditing] = useState(false)
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -55,70 +56,72 @@ export default function SettingsPage() {
   })
   const [successMessage, setSuccessMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+  const [phoneError, setPhoneError] = useState("")
   const [currentFontSize, setCurrentFontSize] = useState("medium")
   const [currentLanguage, setCurrentLanguage] = useState("english")
 
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      setIsLoading(true)
-      try {
-        const profile = await api.users.getProfile()
-        setProfileData({
-          name: profile.name || user?.name || "",
-          email: profile.email || user?.email || "",
-          phone: profile.phone || "",
-          address: profile.address || "",
-          bio: profile.bio || "",
-          barCouncilNumber: profile.barCouncilNumber || "",
-          specialization: profile.specialization || "",
-          yearsOfExperience: profile.yearsOfExperience || "",
-        })
+  // Refetch profile data (for save and tab switch)
+  const fetchUserProfile = async () => {
+    setIsLoading(true)
+    try {
+      const profile = await api.users.getProfile()
+      setProfileData({
+        name: profile.data.name || user?.name || "",
+        email: profile.data.email || user?.email || "",
+        phone: profile.data.phone || "",
+        address: profile.data.address || "",
+        bio: profile.data.bio || "",
+        barCouncilNumber: profile.data.barCouncilNumber || "",
+        specialization: profile.data.specialization || "",
+        yearsOfExperience: profile.data.yearsOfExperience || "",
+      })
 
-        // Set notification settings if available
-        if (profile.notificationSettings) {
-          setNotificationSettings(profile.notificationSettings)
-        }
-
-        // Set security settings if available
-        if (profile.securitySettings) {
-          setSecuritySettings(profile.securitySettings)
-        }
-
-        // Set appearance settings if available
-        if (profile.appearanceSettings) {
-          setAppearanceSettings(profile.appearanceSettings)
-
-          // Apply font size from settings
-          if (profile.appearanceSettings.fontSize) {
-            setCurrentFontSize(profile.appearanceSettings.fontSize)
-            applyFontSize(profile.appearanceSettings.fontSize)
-          }
-
-          // Apply language from settings
-          if (profile.appearanceSettings.language) {
-            setCurrentLanguage(profile.appearanceSettings.language)
-          }
-
-          // Apply theme from settings
-          if (profile.appearanceSettings.theme) {
-            setTheme(profile.appearanceSettings.theme)
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching profile:", error)
-        // Fallback to user data from auth context
-        if (user) {
-          setProfileData((prev) => ({
-            ...prev,
-            name: user.name || "",
-            email: user.email || "",
-          }))
-        }
-      } finally {
-        setIsLoading(false)
+      // Set notification settings if available
+      if (profile.data.notificationSettings) {
+        setNotificationSettings(profile.data.notificationSettings)
       }
-    }
 
+      // Set security settings if available
+      if (profile.data.securitySettings) {
+        setSecuritySettings(profile.data.securitySettings)
+      }
+
+      // Set appearance settings if available
+      if (profile.data.appearanceSettings) {
+        setAppearanceSettings(profile.data.appearanceSettings)
+
+        // Apply font size from settings
+        if (profile.data.appearanceSettings.fontSize) {
+          setCurrentFontSize(profile.data.appearanceSettings.fontSize)
+          applyFontSize(profile.data.appearanceSettings.fontSize)
+        }
+
+        // Apply language from settings
+        if (profile.data.appearanceSettings.language) {
+          setCurrentLanguage(profile.data.appearanceSettings.language)
+        }
+
+        // Apply theme from settings
+        if (profile.data.appearanceSettings.theme) {
+          setTheme(profile.data.appearanceSettings.theme)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error)
+      // Fallback to user data from auth context
+      if (user) {
+        setProfileData((prev) => ({
+          ...prev,
+          name: user.name || "",
+          email: user.email || "",
+        }))
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
     fetchUserProfile()
 
     // Initialize font size from localStorage or default
@@ -131,9 +134,28 @@ export default function SettingsPage() {
     setCurrentLanguage(savedLanguage)
   }, [user, setTheme])
 
+  // Handle tab change
+  const [activeTab, setActiveTab] = useState("profile")
+  const handleTabChange = (value) => {
+    setActiveTab(value)
+    if (value === "profile") {
+      fetchUserProfile()
+      setIsEditing(false)
+    }
+  }
+
   const handleProfileChange = (e) => {
     const { name, value } = e.target
-    setProfileData((prev) => ({ ...prev, [name]: value }))
+    if (name === "phone") {
+      // Only allow digits
+      if (!/^\d*$/.test(value)) return
+      // Validate length
+      if (value.length > 10) return
+      setProfileData((prev) => ({ ...prev, [name]: value }))
+      setPhoneError("")
+    } else {
+      setProfileData((prev) => ({ ...prev, [name]: value }))
+    }
   }
 
   const handlePasswordChange = (e) => {
@@ -193,13 +215,21 @@ export default function SettingsPage() {
     setIsLoading(true)
     setSuccessMessage("")
     setErrorMessage("")
-
+    setPhoneError("")
+    // Frontend phone validation
+    if (profileData.phone && !/^\d{10}$/.test(profileData.phone)) {
+      setPhoneError("Phone number must be exactly 10 digits.")
+      setIsLoading(false)
+      return
+    }
     try {
       await api.users.updateProfile(profileData)
       setSuccessMessage("Profile updated successfully")
+      setIsEditing(false)
+      fetchUserProfile()
     } catch (error) {
-      console.error("Error updating profile:", error)
-      setErrorMessage("Failed to update profile. Please try again.")
+      // Show backend error if available
+      setErrorMessage(error.message || "Failed to update profile. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -347,9 +377,9 @@ export default function SettingsPage() {
 
       {successMessage && <div className="bg-green-50 text-green-800 p-4 rounded-md mb-4">{t.successMessage}</div>}
 
-      {errorMessage && <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">{t.errorMessage}</div>}
+      {errorMessage && <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">{errorMessage}</div>}
 
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs defaultValue="profile" value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="profile">{t.profile}</TabsTrigger>
           <TabsTrigger value="password">{t.password}</TabsTrigger>
@@ -360,16 +390,23 @@ export default function SettingsPage() {
 
         <TabsContent value="profile">
           <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your personal information and professional details</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Profile Information</CardTitle>
+                <CardDescription>Update your personal information and professional details</CardDescription>
+              </div>
+              {!isEditing && (
+                <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)} aria-label="Edit Profile">
+                  <Pencil className="h-5 w-5" />
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <form id="profile-form" onSubmit={updateProfile} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" name="name" value={profileData.name} onChange={handleProfileChange} required />
+                    <Input id="name" name="name" value={profileData.name} onChange={handleProfileChange} required readOnly={!isEditing} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
@@ -380,6 +417,7 @@ export default function SettingsPage() {
                       value={profileData.email}
                       onChange={handleProfileChange}
                       required
+                      readOnly={!isEditing}
                     />
                   </div>
                 </div>
@@ -387,39 +425,47 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input id="phone" name="phone" value={profileData.phone} onChange={handleProfileChange} />
+                    <Input id="phone" name="phone" value={profileData.phone} onChange={handleProfileChange} readOnly={!isEditing} />
+                    {phoneError && <div className="text-red-600 text-xs mt-1">{phoneError}</div>}
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="barCouncilNumber">Bar Council Number</Label>
-                    <Input
-                      id="barCouncilNumber"
-                      name="barCouncilNumber"
-                      value={profileData.barCouncilNumber}
-                      onChange={handleProfileChange}
-                    />
-                  </div>
+                  {user?.role === "lawyer" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="barCouncilNumber">Bar Council Number</Label>
+                      <Input
+                        id="barCouncilNumber"
+                        name="barCouncilNumber"
+                        value={profileData.barCouncilNumber}
+                        onChange={handleProfileChange}
+                        readOnly={!isEditing}
+                      />
+                    </div>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="specialization">Specialization</Label>
-                    <Input
-                      id="specialization"
-                      name="specialization"
-                      value={profileData.specialization}
-                      onChange={handleProfileChange}
-                    />
+                {user?.role === "lawyer" && (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="specialization">Specialization</Label>
+                      <Input
+                        id="specialization"
+                        name="specialization"
+                        value={profileData.specialization}
+                        onChange={handleProfileChange}
+                        readOnly={!isEditing}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="yearsOfExperience">Years of Experience</Label>
+                      <Input
+                        id="yearsOfExperience"
+                        name="yearsOfExperience"
+                        value={profileData.yearsOfExperience}
+                        onChange={handleProfileChange}
+                        readOnly={!isEditing}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="yearsOfExperience">Years of Experience</Label>
-                    <Input
-                      id="yearsOfExperience"
-                      name="yearsOfExperience"
-                      value={profileData.yearsOfExperience}
-                      onChange={handleProfileChange}
-                    />
-                  </div>
-                </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="address">Address</Label>
@@ -429,6 +475,7 @@ export default function SettingsPage() {
                     value={profileData.address}
                     onChange={handleProfileChange}
                     rows={3}
+                    readOnly={!isEditing}
                   />
                 </div>
 
@@ -441,22 +488,25 @@ export default function SettingsPage() {
                     onChange={handleProfileChange}
                     rows={4}
                     placeholder="Tell us about your professional background and expertise"
+                    readOnly={!isEditing}
                   />
                 </div>
+                {isEditing && (
+                  <div className="flex justify-end">
+                    <Button type="submit" form="profile-form" disabled={isLoading}>
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t.saving}
+                        </>
+                      ) : (
+                        t.saveChanges
+                      )}
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button type="submit" form="profile-form" disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t.saving}
-                  </>
-                ) : (
-                  t.saveChanges
-                )}
-              </Button>
-            </CardFooter>
           </Card>
         </TabsContent>
 
