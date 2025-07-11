@@ -103,11 +103,11 @@ export default function Home() {
           className="flex items-center gap-3"
         >
           <Image
-            src="/adhi_logo1.jpg"
+            src="/adhi_logo_1.png"
             alt="Adhivakta Logo"
             width={48}
             height={48}
-            className="rounded-full object-cover border-2 border-gray-300 shadow-lg"
+            className="object-contain border-2 border-gray-300 shadow-lg"
             style={{objectPosition:'center', width:'48px', height:'48px'}}
           />
         </motion.div>

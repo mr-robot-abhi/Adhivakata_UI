@@ -39,7 +39,7 @@ export default function Sidebar() {
     <div className="flex h-full w-48 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/adhi_logo1.jpg" alt="Adhivakta Logo" className="h-14 w-14 rounded-full object-cover border-2 border-gray-300 shadow-lg" style={{objectPosition:'center', width:'56px', height:'56px'}} />
+          <img src="/adhi_logo_1.png" alt="Adhivakta Logo" className="h-14 w-14 object-contain border-2 border-gray-300 shadow-lg" style={{objectPosition:'center', width:'56px', height:'56px'}} />
         </Link>
       </div>
 

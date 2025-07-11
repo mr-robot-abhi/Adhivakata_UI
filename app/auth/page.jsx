@@ -10,11 +10,11 @@ export default function AuthPage() {
         <div className="flex flex-col justify-center p-8">
           <div className="flex justify-center items-center my-8">
             <Image
-              src="/adhi_logo1.jpg"
+              src="/adhi_logo_1.png"
               alt="Adhivakta Logo"
               width={120}
               height={120}
-              className="rounded-full object-cover border-2 border-gray-300 shadow-lg"
+              className="object-contain border-2 border-gray-300 shadow-lg"
               style={{objectPosition:'center', width:'120px', height:'120px'}}
             />
           </div>
