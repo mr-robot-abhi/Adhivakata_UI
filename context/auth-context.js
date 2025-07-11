@@ -184,6 +184,19 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  // Add a method to refresh user from backend
+  const refreshUser = async () => {
+    try {
+      const profile = await api.users.getProfile();
+      if (profile && profile.data) {
+        setUser(profile.data);
+        localStorage.setItem("user", JSON.stringify(profile.data));
+      }
+    } catch (error) {
+      console.error("Failed to refresh user profile:", error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -193,6 +206,7 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         loginWithGoogle,
+        refreshUser, // Expose refreshUser
       }}
     >
       {children}

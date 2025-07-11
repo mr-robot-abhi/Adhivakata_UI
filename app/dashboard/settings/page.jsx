@@ -17,7 +17,7 @@ import api from "@/services/api"
 import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
-  const { user } = useAuth()
+  const { user, refreshUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -239,6 +239,7 @@ export default function SettingsPage() {
       setSuccessMessage("Profile updated successfully")
       setIsEditing(false)
       fetchUserProfile()
+      if (refreshUser) await refreshUser(); // Update AuthContext and localStorage
     } catch (error) {
       // Show backend error if available
       setErrorMessage(error.message || "Failed to update profile. Please try again.")

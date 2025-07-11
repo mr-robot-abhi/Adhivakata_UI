@@ -65,23 +65,46 @@ export default function CalendarPage() {
     }
   }, [user])
 
-  // Fetch cases from backend
+  // Fetch cases and events in parallel for faster load
   useEffect(() => {
-    const loadCases = async () => {
+    const fetchData = async () => {
       try {
-        const fetchedCases = await fetchCases()
-        setCases(fetchedCases)
+        const [fetchedCases, eventsResponse] = await Promise.all([
+          fetchCases(),
+          api.events.getAll(),
+        ]);
+        setCases(fetchedCases);
+        // Format events as before
+        if (Array.isArray(eventsResponse)) {
+          const formattedEvents = eventsResponse.map((event) => ({
+            id: event._id || event.id,
+            title: event.title,
+            date: event.start ? new Date(event.start).toISOString().split("T")[0] : null,
+            time: event.start
+              ? new Date(event.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : null,
+            type: event.type || "hearing",
+            location: event.location || "",
+            description: event.description || "",
+            case: event.case?.title || "",
+            caseId: event.case?._id || "",
+          }));
+          setEvents(formattedEvents);
+        } else {
+          setEvents([]);
+          console.error('Events fetch did not return an array:', eventsResponse);
+        }
       } catch (error) {
-        console.error("Error fetching cases:", error)
+        console.error("Error fetching cases or events:", error);
         toast({
-          title: "Error fetching cases",
-          description: "Failed to load cases. Please try again.",
+          title: "Error fetching data",
+          description: "Failed to load cases or events. Please try again.",
           variant: "destructive",
-        })
+        });
       }
-    }
-    loadCases()
-  }, [])
+    };
+    fetchData();
+  }, []);
 
   // Get current month and year
   const currentMonth = currentDate.getMonth()

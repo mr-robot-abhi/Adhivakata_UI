@@ -28,8 +28,7 @@ const bottomNavItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth()
-  const user = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user")) : null
+  const { logout, user } = useAuth()
 
   // Determine if user is lawyer or client
   const isLawyer = user?.role === "lawyer"

@@ -1,65 +1,39 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useAuth } from "@/context/auth-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/auth-context";
+import api from "@/services/api";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarIcon, FileTextIcon, BarChart3Icon, ClockIcon, AlertCircleIcon, FolderOpen, Users, Eye } from "lucide-react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  LabelList,
-  ResponsiveContainer
-} from 'recharts';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
-
-import Image from "next/image"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import api from "@/services/api"
+import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import DashboardStats from "@/components/dashboard/DashboardStats";
+import CaseStatisticsChart from "@/components/dashboard/CaseStatisticsChart";
 
 export default function DashboardPage() {
-  const { user } = useAuth()
-  const isLawyer = user?.role === "lawyer"
-  const [dashboardData, setDashboardData] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [isNewUser, setIsNewUser] = useState(false)
+  const { user } = useAuth();
+  const isLawyer = user?.role === "lawyer";
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isNewUser, setIsNewUser] = useState(false);
 
-  // Keep a reference to fetchDashboardData for manual refresh
   const fetchDashboardData = async () => {
     try {
-      // Fetch dashboard summary
-      const summary = await api.dashboard.getSummary()
-      console.log('DASHBOARD SUMMARY:', summary);
-
-      // Fetch recent cases
-      const recentCases = await api.dashboard.getRecentCases()
-
-      // Fetch upcoming events
-      const upcomingEvents = await api.dashboard.getUpcomingEvents()
-
-      console.log('Fetched summary:', summary);
-      console.log('Fetched recentCases:', recentCases);
-      console.log('Fetched upcomingEvents:', upcomingEvents);
+      // Fetch all dashboard data in parallel
+      const [summary, recentCases, upcomingEvents] = await Promise.all([
+        api.dashboard.getSummary(),
+        api.dashboard.getRecentCases(),
+        api.dashboard.getUpcomingEvents(),
+      ]);
       setDashboardData({
         summary,
         recentCases: recentCases || [],
         upcomingEvents: upcomingEvents || [],
-      })
-
-      // If no cases, consider this a new user
-      setIsNewUser(recentCases && recentCases.length === 0)
+      });
+      setIsNewUser(recentCases && recentCases.length === 0);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error)
-      // Set as new user if we can't fetch data
-      setIsNewUser(true)
+      setIsNewUser(true);
       setDashboardData({
         summary: {
           activeCases: 0,
@@ -86,12 +60,11 @@ export default function DashboardPage() {
       <div className="flex justify-center items-center h-full">
         <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
-    )
+    );
   }
 
-  // If this is a new user, show welcome message
   if (isNewUser) {
-    return <NewUserDashboard isLawyer={isLawyer} user={user} />
+    return <NewUserDashboard isLawyer={isLawyer} user={user} />;
   }
 
   return (
@@ -102,10 +75,9 @@ export default function DashboardPage() {
         </div>
         <div className="text-sm text-muted-foreground">Welcome, {user?.name || "User"}</div>
       </div>
-
       {isLawyer ? <LawyerDashboard data={dashboardData} /> : <ClientDashboard data={dashboardData} />}
     </div>
-  )
+  );
 }
 
 function NewUserDashboard({ isLawyer, user }) {
@@ -221,9 +193,6 @@ function NewUserDashboard({ isLawyer, user }) {
     </div>
   )
 }
-
-import DashboardStats from "@/components/dashboard/DashboardStats";
-import CaseStatisticsChart from "@/components/dashboard/CaseStatisticsChart";
 
 function LawyerDashboard({ data }) {
   const { summary, recentCases, upcomingEvents } = data || {}
