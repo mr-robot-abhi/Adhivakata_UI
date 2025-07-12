@@ -2,25 +2,15 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import { ArrowRight, CheckCircle, Shield, Scale, BookOpen, Gavel, Users, ChevronDown, Star } from "lucide-react"
+import { LogoAvatar } from "@/components/ui/avatar"
 
 export default function Home() {
-  // Animation and scroll logic removed for SSR
-  // All content and layout preserved
-  // Framer Motion removed for SSR
-
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 flex h-16 items-center border-b bg-white/95 backdrop-blur-sm px-4 md:px-8 shadow-sm">
+      <header className="sticky top-0 z-50 flex h-20 items-center border-b bg-white/95 backdrop-blur-sm px-4 md:px-8 shadow-sm">
         <div className="flex items-center gap-3">
-          <Image
-            src="/adhi_logo_1.png"
-            alt="Adhivakta Logo"
-            width={48}
-            height={48}
-            className="object-contain border-2 border-gray-300 shadow-lg"
-            style={{objectPosition:'center', width:'48px', height:'48px'}}
-          />
+          <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={80} cropBottom />
         </div>
         <nav className="ml-auto flex items-center gap-6">
           {[
@@ -51,7 +41,7 @@ export default function Home() {
 
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full pt-24 pb-32 overflow-hidden bg-gray-50">
+        <section className="relative w-full pt-24 pb-32 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-100">
           <div className="absolute inset-0 z-0">
             <Image
               src="/images/bg_5.png"
@@ -64,18 +54,18 @@ export default function Home() {
           </div>
 
           <div className="container relative z-20 px-4 md:px-8 max-w-7xl mx-auto">
-            <div className="grid gap-8 lg:grid-cols-2 lg:gap-16 items-center">
-              <div className="space-y-6">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-white leading-tight">
+            <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fade-in-up">
+              <div className="space-y-6 max-w-2xl mx-auto">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-white leading-tight drop-shadow-lg animate-fade-in">
                   Elevate Your <br />
                   <span className="text-gray-300">Legal Practice</span> <br />
                   with Precision
                 </h1>
-                <p className="text-lg md:text-xl text-gray-300 max-w-xl">
+                <p className="text-lg md:text-xl text-gray-300 max-w-xl mx-auto animate-fade-in delay-100">
                   Adhivakta offers a sophisticated platform to manage cases, streamline documents, and enhance client
                   communication with unmatched efficiency.
                 </p>
-                <div className="flex gap-4">
+                <div className="flex gap-4 justify-center animate-fade-in delay-200">
                   <Link href="/auth/register">
                     <Button size="lg" className="bg-black hover:bg-gray-800 text-white px-8 group">
                       Start Free Trial
@@ -94,30 +84,20 @@ export default function Home() {
                     </Button>
                   </Link>
                 </div>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-400 animate-fade-in delay-300">
                   No credit card required. 30-day free trial for all plans.
                 </p>
-              </div>
-              <div className="relative h-[400px] lg:h-[500px] w-full max-w-md mx-auto">
-                <Image
-                  src="/images/bg_2.jpg"
-                  alt="Justice symbol"
-                  fill
-                  className="object-cover rounded-xl shadow-2xl filter grayscale"
-                  loading="eager"
-                />
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/30 to-transparent rounded-xl" />
               </div>
             </div>
           </div>
 
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
             <ChevronDown className="h-8 w-8 text-white" />
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="features" className="w-full py-24 bg-white">
+        <section id="features" className="w-full py-24 bg-white animate-fade-in-up delay-200">
           <div className="container px-4 md:px-8 max-w-7xl mx-auto">
             <div className="text-center space-y-4 mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
@@ -408,9 +388,7 @@ export default function Home() {
       <footer className="border-t py-8 bg-white">
         <div className="container px-4 md:px-8 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-gray-900 flex items-center justify-center text-white font-bold">
-              A
-            </div>
+            <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={40} cropBottom />
             <span className="text-lg font-semibold text-gray-900">Adhivakta</span>
           </div>
           <div className="flex gap-6">

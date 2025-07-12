@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { LayoutDashboard, FileText, FolderOpen, Calendar, Settings, HelpCircle, LogOut } from "lucide-react"
 import { useAuth } from "@/context/auth-context"
 import { Button } from "@/components/ui/button"
+import { LogoAvatar } from "@/components/ui/avatar"
 
 const getLawyerNavItems = () => [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -38,7 +39,7 @@ export default function Sidebar() {
     <div className="flex h-full w-48 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/adhi_logo_1.png" alt="Adhivakta Logo" className="h-14 w-14 object-contain border-2 border-gray-300 shadow-lg" style={{objectPosition:'center', width:'56px', height:'56px'}} />
+          <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={56} />
         </Link>
       </div>
 

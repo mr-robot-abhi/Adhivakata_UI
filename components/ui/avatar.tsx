@@ -48,3 +48,25 @@ const AvatarFallback = React.forwardRef<
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
 export { Avatar, AvatarImage, AvatarFallback }
+
+// Custom LogoAvatar for circular logo cropping
+interface LogoAvatarProps {
+  src: string;
+  alt: string;
+  size?: number;
+  cropBottom?: boolean;
+}
+
+export function LogoAvatar({ src, alt, size = 48, cropBottom = false }: LogoAvatarProps) {
+  return (
+    <Avatar style={{ width: size, height: size }} className="border-2 border-gray-300 shadow-lg bg-white">
+      <AvatarImage
+        src={src}
+        alt={alt}
+        className={cropBottom ? "object-cover" : "object-cover"}
+        style={cropBottom ? { objectPosition: `center 40%` } : { objectPosition: 'center' }}
+      />
+      <AvatarFallback>{alt?.[0] || "A"}</AvatarFallback>
+    </Avatar>
+  );
+}

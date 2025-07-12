@@ -92,3 +92,28 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(40px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 1s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 1.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.animate-bounce {
+  animation: bounce 1.5s infinite alternate cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes bounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(16px); }
+}

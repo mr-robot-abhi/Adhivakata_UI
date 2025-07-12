@@ -2,6 +2,7 @@ import { LoginForm } from "@/components/auth/login-form"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import Link from "next/link"
+import { LogoAvatar } from "@/components/ui/avatar"
 
 export default function LoginPage() {
   return (
@@ -9,14 +10,7 @@ export default function LoginPage() {
       <div className="grid w-full max-w-[1000px] grid-cols-1 md:grid-cols-2 gap-8 rounded-lg border bg-background shadow">
         <div className="flex flex-col justify-center p-8">
           <div className="flex justify-center items-center my-8">
-            <Image
-              src="/adhi_logo_1.png"
-              alt="Adhivakta Logo"
-              width={120}
-              height={120}
-              className="object-contain border-2 border-gray-300 shadow-lg"
-              style={{objectPosition:'center', width:'120px', height:'120px'}}
-            />
+            <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={120} />
           </div>
           <Card>
             <CardHeader>
