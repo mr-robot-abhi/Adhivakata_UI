@@ -57,14 +57,14 @@ interface LogoAvatarProps {
   cropBottom?: boolean;
 }
 
-export function LogoAvatar({ src, alt, size = 48, cropBottom = false }: LogoAvatarProps) {
+export function LogoAvatar({ src, alt, size = 80, cropBottom = false }: LogoAvatarProps) {
   return (
-    <Avatar style={{ width: size, height: size }} className="border-2 border-gray-300 shadow-lg bg-white">
+    <Avatar style={{ width: size, height: size }}>
       <AvatarImage
         src={src}
         alt={alt}
-        className={cropBottom ? "object-cover" : "object-cover"}
-        style={cropBottom ? { objectPosition: `center 40%` } : { objectPosition: 'center' }}
+        className={cropBottom ? "object-cover scale-125" : "object-cover scale-125"}
+        style={cropBottom ? { objectPosition: `center 50%` } : { objectPosition: 'center' }}
       />
       <AvatarFallback>{alt?.[0] || "A"}</AvatarFallback>
     </Avatar>

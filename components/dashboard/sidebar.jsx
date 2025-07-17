@@ -39,7 +39,7 @@ export default function Sidebar() {
     <div className="flex h-full w-48 flex-col border-r bg-background">
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/" className="flex items-center gap-2">
-          <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={56} />
+          <LogoAvatar src="/adhi_logo_main.png" alt="Adhivakta Logo" size={64} cropBottom />
         </Link>
       </div>
 

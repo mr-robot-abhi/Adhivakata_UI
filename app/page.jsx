@@ -8,9 +8,9 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 flex h-20 items-center border-b bg-white/95 backdrop-blur-sm px-4 md:px-8 shadow-sm">
+      <header className="sticky top-0 z-50 flex h-24 items-center border-b bg-transparent backdrop-blur-sm px-4 md:px-8 shadow-none">
         <div className="flex items-center gap-3">
-          <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={80} cropBottom />
+          <Image src="/adhi_logo_main.png" alt="Adhivakta Logo" width={96} height={96} style={{objectFit: 'contain'}} />
         </div>
         <nav className="ml-auto flex items-center gap-6">
           {[
@@ -19,14 +19,14 @@ export default function Home() {
             { href: "#pricing", label: "Pricing" },
           ].map((link) => (
             <div key={link.href}>
-              <Link href={link.href} className="text-sm font-medium text-gray-700 hover:text-black transition-colors">
+              <Link href={link.href} className="text-sm font-medium text-gray-700 hover:text-black transition-colors bg-white/80 hover:bg-white rounded-lg px-4 py-2 shadow-sm">
                 {link.label}
               </Link>
             </div>
           ))}
           <div>
             <Link href="/auth/login">
-              <Button variant="ghost" className="text-gray-700 hover:text-black">
+              <Button variant="ghost" className="text-gray-700 hover:text-black bg-white/80 hover:bg-white rounded-lg px-4 py-2 shadow-sm">
                 Login
               </Button>
             </Link>
@@ -39,20 +39,20 @@ export default function Home() {
         </nav>
       </header>
 
+      {/* Background image for the whole homepage */}
+      <div className="absolute inset-0 -z-10">
+        <Image
+          src="/images/bg_5.png"
+          alt="Legal background"
+          fill
+          className="object-cover object-center"
+          priority
+        />
+      </div>
+
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full pt-24 pb-32 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-100">
-          <div className="absolute inset-0 z-0">
-            <Image
-              src="/images/bg_5.png"
-              alt="Legal background"
-              fill
-              className="object-cover object-center filter grayscale"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-gray-900/70 to-transparent z-10" />
-          </div>
-
+        <section className="relative w-full pt-24 pb-32 overflow-hidden">
           <div className="container relative z-20 px-4 md:px-8 max-w-7xl mx-auto">
             <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fade-in-up">
               <div className="space-y-6 max-w-2xl mx-auto">
@@ -90,7 +90,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
             <ChevronDown className="h-8 w-8 text-white" />
           </div>
@@ -101,75 +100,48 @@ export default function Home() {
           <div className="container px-4 md:px-8 max-w-7xl mx-auto">
             <div className="text-center space-y-4 mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
-                Comprehensive Tools for Legal Excellence
+                Core Features for Modern Legal Practice
               </h2>
               <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-                Adhivakta empowers legal professionals with intuitive features designed to optimize every aspect of your
-                practice.
+                Adhivakta is designed for both Lawyers and Clients, providing seamless case management, document handling, and secure collaboration.
               </p>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-              {[
-                {
-                  title: "Case Management",
-                  description:
-                    "Effortlessly organize and track cases with customizable workflows and real-time updates.",
-                  icon: <Scale className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_4.png",
-                },
-                {
-                  title: "Document Management",
-                  description:
-                    "Securely store, categorize, and access all case-related documents in a centralized hub.",
-                  icon: <BookOpen className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_5.png",
-                },
-                {
-                  title: "Client Portal",
-                  description:
-                    "Provide clients with a secure, user-friendly portal for case updates and document sharing.",
-                  icon: <Users className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_6.png",
-                },
-                {
-                  title: "Calendar & Deadlines",
-                  description: "Stay ahead with integrated calendars and automated deadline reminders.",
-                  icon: <Gavel className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_4.png",
-                },
-                {
-                  title: "Time & Billing",
-                  description: "Track billable hours and generate professional invoices with ease.",
-                  icon: <Shield className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_5.png",
-                },
-                {
-                  title: "Reporting & Analytics",
-                  description:
-                    "Unlock insights with detailed reports and performance analytics tailored to your practice.",
-                  icon: <CheckCircle className="h-8 w-8 text-gray-900" />,
-                  image: "/images/bg_6.png",
-                },
-              ].map((feature, index) => (
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
+              {[{
+                title: "User Roles: Lawyer & Client",
+                description: "Distinct dashboards and permissions for lawyers and clients, ensuring secure and relevant access for every user.",
+                icon: <Users className="h-8 w-8 text-primary" />,
+              }, {
+                title: "Comprehensive Case Management",
+                description: "Upload and manage cases with all details: court, parties, lawyers, clients, and more. Keep everything organized in one place.",
+                icon: <Gavel className="h-8 w-8 text-primary" />,
+              }, {
+                title: "Document Upload & Management",
+                description: "Attach, organize, and manage documents for each case. Secure storage and easy access for authorized users.",
+                icon: <BookOpen className="h-8 w-8 text-primary" />,
+              }, {
+                title: "Share Cases & Documents",
+                description: "Easily share case and document details with other users in the application, with full control over access.",
+                icon: <Scale className="h-8 w-8 text-primary" />,
+              }, {
+                title: "Event Alerts & Notifications",
+                description: "Get alerts for next hearings, deadlines, and custom events. Stay updated with in-app notifications, email, and (soon) WhatsApp.",
+                icon: <CheckCircle className="h-8 w-8 text-primary" />,
+              }, {
+                title: "Custom Events & Reminders",
+                description: "Set your own events and reminders for any case. Never miss an important date or deadline again.",
+                icon: <Shield className="h-8 w-8 text-primary" />,
+              }].map((feature, index) => (
                 <div
                   key={index}
-                  className="relative bg-white rounded-xl shadow-lg overflow-hidden group"
+                  className="relative bg-white rounded-2xl shadow-xl border border-gray-100 p-8 flex flex-col items-center text-center transition-transform duration-300 hover:-translate-y-2 hover:shadow-2xl group animate-fade-in-up"
+                  style={{ minHeight: 260 }}
                 >
-                  <div className="relative h-48">
-                    <Image
-                      src={feature.image || "/placeholder.svg"}
-                      alt={feature.title}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105 filter grayscale"
-                      loading="lazy"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent" />
+                  <div className="mb-4 flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 animate-fade-in">
+                    {feature.icon}
                   </div>
-                  <div className="p-6 text-center space-y-3">
-                    <div>{feature.icon}</div>
-                    <h3 className="text-xl font-semibold text-gray-900">{feature.title}</h3>
-                    <p className="text-gray-700 text-sm">{feature.description}</p>
-                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2 animate-fade-in delay-100">{feature.title}</h3>
+                  <p className="text-gray-700 text-base animate-fade-in delay-200">{feature.description}</p>
                 </div>
               ))}
             </div>
@@ -388,11 +360,10 @@ export default function Home() {
       <footer className="border-t py-8 bg-white">
         <div className="container px-4 md:px-8 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={40} cropBottom />
-            <span className="text-lg font-semibold text-gray-900">Adhivakta</span>
+            <Image src="/adhi_logo_main.png" alt="Adhivakta Logo" width={80} height={80} style={{objectFit: 'contain'}} />
           </div>
           <div className="flex gap-6">
-            {["Terms", "Privacy", "Contact", "Support"].map((item) => (
+            {['Terms', 'Privacy', 'Contact', 'Support'].map((item) => (
               <Link key={item} href="#" className="text-sm text-gray-700 hover:text-gray-900 transition-colors">
                 {item}
               </Link>

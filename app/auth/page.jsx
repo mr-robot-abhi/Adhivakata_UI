@@ -10,7 +10,7 @@ export default function AuthPage() {
       <div className="grid w-full max-w-[1000px] grid-cols-1 md:grid-cols-2 gap-8 rounded-lg border bg-background shadow">
         <div className="flex flex-col justify-center p-8">
           <div className="flex justify-center items-center my-8">
-            <LogoAvatar src="/adhivakta_logo_whie.png" alt="Adhivakta Logo" size={120} />
+            <LogoAvatar src="/adhi_logo_main.png" alt="Adhivakta Logo" size={120} cropBottom />
           </div>
           <Card>
             <CardContent className="pt-6">
