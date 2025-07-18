@@ -6,7 +6,7 @@ import { LogoAvatar } from "@/components/ui/avatar"
 
 export default function Home() {
   return (
-    <div className="flex min-h-screen flex-col bg-white">
+    <div className="flex min-h-screen flex-col">
       {/* Header */}
       <header className="sticky top-0 z-50 flex h-24 items-center border-b bg-transparent backdrop-blur-sm px-4 md:px-8 shadow-none">
         <div className="flex items-center gap-3">
@@ -39,20 +39,19 @@ export default function Home() {
         </nav>
       </header>
 
-      {/* Background image for the whole homepage */}
-      <div className="absolute inset-0 -z-10">
-        <Image
-          src="/images/bg_5.png"
-          alt="Legal background"
-          fill
-          className="object-cover object-center"
-          priority
-        />
-      </div>
-
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full pt-24 pb-32 overflow-hidden">
+          {/* Background image for the hero section only */}
+          <div className="absolute inset-0 -z-10">
+            <Image
+              src="/images/bg_main.png"
+              alt="Legal background"
+              fill
+              className="object-cover object-center"
+              priority
+            />
+          </div>
           <div className="container relative z-20 px-4 md:px-8 max-w-7xl mx-auto">
             <div className="flex flex-col items-center justify-center text-center space-y-8 animate-fade-in-up">
               <div className="space-y-6 max-w-2xl mx-auto">
@@ -78,13 +77,13 @@ export default function Home() {
                     <Button
                       size="lg"
                       variant="outline"
-                      className="px-8 border-gray-300 text-white hover:bg-gray-800/50"
+                      className="px-8 border-gray-300 text-black hover:text-black hover:bg-gray-800/50"
                     >
                       Discover More
                     </Button>
                   </Link>
                 </div>
-                <p className="text-sm text-gray-400 animate-fade-in delay-300">
+                <p className="text-sm text-white animate-fade-in delay-300">
                   No credit card required. 30-day free trial for all plans.
                 </p>
               </div>
